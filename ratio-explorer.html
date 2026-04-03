@@ -1,0 +1,2398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ratio Explorer</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0e0e;
+    --surface: #161616;
+    --border: #2a2a2a;
+    --accent: #c8f060;
+    --accent2: #f06060;
+    --accent3: #f0a060;
+    --text: #e8e8e8;
+    --muted: #666;
+    --playing: #c8f060;
+    --glow-top: #1a2a0a;
+    --glow-bottom: #1a0a0a;
+    --beat-1: #c8f060;
+    --beat-2: #a8e040;
+    --beat-3: #f0d060;
+    --beat-4: #f09040;
+    --beat-5: #f06060;
+  }
+
+  [data-theme="light"] {
+    --bg: #f4f4ef;
+    --surface: #ffffff;
+    --border: #d8d8d2;
+    --accent: #4a7000;
+    --accent2: #b82020;
+    --accent3: #c06000;
+    --text: #1a1a1a;
+    --muted: #888880;
+    --playing: #4a7000;
+    --glow-top: #e8f0d8;
+    --glow-bottom: #f0e8e8;
+    --beat-1: #4a7000;
+    --beat-2: #3d6400;
+    --beat-3: #8a6000;
+    --beat-4: #7a4000;
+    --beat-5: #b82020;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px 60px;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse 80% 60% at 50% 0%, var(--glow-top) 0%, transparent 60%),
+                radial-gradient(ellipse 60% 40% at 80% 100%, var(--glow-bottom) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 780px;
+    width: 100%;
+    position: relative;
+    z-index: 1;
+  }
+
+  header {
+    margin-bottom: 48px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 24px;
+    position: relative;
+  }
+
+  .theme-toggle {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 2px 4px;
+    line-height: 1;
+    transition: color 0.15s;
+  }
+  .theme-toggle:hover { color: var(--text); }
+
+  h1 {
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  h1 span {
+    color: var(--accent);
+  }
+
+  .subtitle {
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: 8px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 28px;
+    margin-bottom: 16px;
+  }
+  .panel-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 18px;
+  }
+
+  /* Base frequency */
+  .base-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .base-row label {
+    font-size: 0.75rem;
+    color: var(--muted);
+    min-width: 80px;
+  }
+
+  input[type="number"] {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 1rem;
+    padding: 8px 12px;
+    border-radius: 3px;
+    width: 110px;
+    text-align: center;
+    transition: border-color 0.2s;
+  }
+
+  input[type="number"]:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  .hz-label {
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+
+  /* Ratio inputs */
+  .ratio-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+
+  .ratio-inputs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .ratio-inputs input {
+    width: 72px;
+    text-align: center;
+  }
+
+  .ratio-sep {
+    font-size: 1.4rem;
+    color: var(--muted);
+    font-family: 'Instrument Serif', serif;
+  }
+
+  .ratio-result {
+    font-size: 0.8rem;
+    color: var(--muted);
+    padding: 8px 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+
+  .ratio-result .freq-val {
+    color: var(--accent);
+  }
+
+  /* Slider */
+  .slider-section {
+    margin-top: 4px;
+  }
+
+  .slider-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .slider-header span {
+    font-size: 0.7rem;
+    color: var(--muted);
+  }
+
+  .slider-val {
+    color: var(--text) !important;
+    font-size: 0.82rem !important;
+  }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+    position: relative;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+
+  input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.3);
+  }
+
+  .slider-ticks {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 6px;
+  }
+
+  .slider-ticks span {
+    font-size: 0.6rem;
+    color: var(--muted);
+    letter-spacing: 0;
+  }
+
+  /* Named ratios */
+  .named-ratios {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 0;
+  }
+
+  .ratio-btn {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.68rem;
+    padding: 6px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.15s;
+    line-height: 1.4;
+    text-align: left;
+  }
+
+  .ratio-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .ratio-btn .btn-name {
+    display: block;
+    color: var(--text);
+    font-size: 0.72rem;
+  }
+
+  /* Oscillator toggle */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .toggle-label {
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+
+  .toggle-group {
+    display: flex;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .toggle-btn {
+    background: var(--bg);
+    border: none;
+    border-right: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    padding: 6px 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.04em;
+  }
+
+  .toggle-btn:last-child { border-right: none; }
+
+  .toggle-btn.active {
+    background: var(--accent);
+    color: var(--bg);
+    font-weight: 500;
+  }
+
+  /* Play controls */
+  .play-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .play-btn {
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    padding: 10px 22px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .play-btn:hover {
+    background: var(--accent);
+    color: var(--bg);
+  }
+
+  .play-btn.active {
+    background: var(--accent);
+    color: var(--bg);
+  }
+
+  .play-btn.stop-btn {
+    border-color: var(--accent2);
+    color: var(--accent2);
+  }
+
+  .play-btn.stop-btn:hover {
+    background: var(--accent2);
+    color: var(--bg);
+  }
+
+  /* Canvas */
+  .canvas-wrap {
+    position: relative;
+  }
+
+  canvas {
+    width: 100%;
+    height: 140px;
+    display: block;
+    border-radius: 2px;
+  }
+
+
+  /* Cents display */
+  .cents-panel {
+    display: flex;
+    gap: 16px;
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+  .cents-box {
+    flex: 1;
+    min-width: 160px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 14px 16px;
+  }
+
+  .cents-box .cb-val { font-size: 1.2rem; }
+
+  .cents-bar-wrap {
+    flex: 2;
+    min-width: 200px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .cents-bar-label {
+    font-size: 0.62rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .cents-bar-track {
+    position: relative;
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+  }
+
+  .cents-bar-fill {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    border-radius: 3px;
+    background: var(--accent);
+    transition: all 0.2s;
+  }
+
+  .cents-bar-center {
+    position: absolute;
+    top: -4px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 2px;
+    height: 14px;
+    background: var(--muted);
+    border-radius: 1px;
+  }
+
+  .cents-bar-ticks {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 5px;
+  }
+
+  .cents-bar-ticks span {
+    font-size: 0.58rem;
+    color: var(--muted);
+  }
+
+  .harmonicity-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+  }
+
+  .harmonicity-label {
+    font-size: 0.68rem;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .harmonicity-track {
+    flex: 1;
+    min-width: 120px;
+    height: 5px;
+    background: var(--border);
+    border-radius: 3px;
+    position: relative;
+  }
+
+  .harmonicity-fill {
+    height: 100%;
+    border-radius: 3px;
+    background: var(--accent);
+    transition: width 0.2s;
+  }
+
+  .harmonicity-val {
+    font-size: 0.8rem;
+    color: var(--text);
+    min-width: 36px;
+    text-align: right;
+  }
+
+  .info-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.15s;
+    line-height: 1;
+  }
+
+  .info-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .tooltip-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.7);
+  }
+
+  .tooltip-overlay.visible { display: flex; }
+
+  .tooltip-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 28px 32px;
+    max-width: 480px;
+    width: 90%;
+    position: relative;
+  }
+
+  .tooltip-box h3 {
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    font-size: 1.3rem;
+    font-weight: 400;
+    margin-bottom: 16px;
+    color: var(--text);
+  }
+
+  .tooltip-box p {
+    font-size: 0.75rem;
+    color: var(--muted);
+    line-height: 1.7;
+    margin-bottom: 10px;
+  }
+
+  .tooltip-box p strong { color: var(--text); }
+
+  .tooltip-formula {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 10px 14px;
+    font-size: 0.8rem;
+    color: var(--accent);
+    margin: 12px 0;
+    letter-spacing: 0.04em;
+  }
+
+  .tooltip-close {
+    position: absolute;
+    top: 12px; right: 14px;
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 1.1rem;
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    transition: color 0.15s;
+  }
+
+  .tooltip-close:hover { color: var(--text); }
+
+  /* Overtone strip canvas */
+  #overtoneCanvas {
+    width: 100%;
+    height: 140px;
+    display: block;
+    border-radius: 2px;
+  }
+
+  .phase-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 14px;
+    opacity: 1;
+    transition: opacity 0.2s;
+  }
+  .phase-row.hidden { opacity: 0.25; pointer-events: none; }
+  .phase-label { font-size: 0.68rem; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; flex-shrink: 0; }
+  .phase-val { font-size: 0.75rem; color: var(--text); min-width: 38px; text-align: right; flex-shrink: 0; }
+
+  .compare-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+  }
+  .compare-label { font-size: 0.68rem; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
+  .compare-btn {
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    padding: 10px 18px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .compare-btn:hover { background: var(--accent); color: var(--bg); }
+  .compare-btn.active { border-color: var(--accent); color: var(--bg); background: var(--accent); }
+
+  .bpm-track-wrap {
+    position: relative;
+    margin: 10px 0 4px;
+  }
+  .bpm-zone-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 5px;
+  }
+  .bpm-zone-labels span {
+    font-size: 0.58rem;
+    color: var(--muted);
+  }
+  .bpm-marker {
+    position: absolute;
+    top: -18px;
+    transform: translateX(-50%);
+    font-size: 0.58rem;
+    color: var(--muted);
+    white-space: nowrap;
+    pointer-events: none;
+  }
+  .bpm-readout {
+    display: flex;
+    gap: 20px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+  }
+  .bpm-readout-box {
+    flex: 1;
+    min-width: 120px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 10px 14px;
+  }
+  .cb-label {
+    font-size: 0.62rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .cb-val {
+    font-size: 1.1rem;
+    color: var(--text);
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+  }
+  .cb-sub {
+    font-size: 0.68rem;
+    color: var(--muted);
+    margin-top: 3px;
+  }
+  .bpm-play-btn {
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    padding: 10px 22px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .bpm-play-btn:hover, .bpm-play-btn.active {
+    background: var(--accent);
+    color: var(--bg);
+  }
+  .bpm-play-btn.stop { border-color: var(--accent2); color: var(--accent2); }
+  .bpm-play-btn.stop:hover { background: var(--accent2); color: var(--bg); }
+
+  .panel-header {
+    display: flex !important;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+    margin-bottom: 18px;
+    width: 100%;
+  }
+  .panel-header > * { flex-shrink: 0; }
+  .panel-header .panel-label { margin-bottom: 0; flex-shrink: 1; }
+  .panel-collapsed {
+    padding: 14px 28px;
+  }
+  .panel-collapsed .panel-header {
+    margin-bottom: 0;
+  }
+  .panel-header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .chevron-btn {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 0.75rem;
+    padding: 2px 4px;
+    line-height: 1;
+    transition: transform 0.2s, color 0.15s;
+    flex-shrink: 0;
+  }
+  .chevron-btn:hover { color: var(--text); }
+  .panel-body {
+    overflow: hidden;
+    transition: none;
+  }
+  .panel-body.collapsed { display: none; }
+  .chevron-btn.collapsed { transform: rotate(-90deg); }
+
+  @media (max-width: 500px) {
+    .panel { padding: 18px; }
+    .ratio-row { gap: 8px; }
+  }
+
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Ratio <span>Explorer</span></h1>
+    <p class="subtitle">frequency ratios &amp; consonance — web audio</p>
+    <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle light/dark mode">☀</button>
+  </header>
+
+  <!-- Base frequency -->
+  <div class="panel">
+    <div class="panel-header" onclick="togglePanel('base')">
+      <div class="panel-label">Base note (f₁)</div>
+      <button class="chevron-btn" id="chev-base">▾</button>
+    </div>
+    <div class="panel-body" id="body-base">
+    <div class="base-row">
+      <label>Frequency</label>
+      <input type="number" id="baseFreq" value="440" min="40" max="1200" step="1">
+      <span class="hz-label">Hz</span>
+      <span class="ratio-result" id="baseNote">A3</span>
+    </div>
+    </div><!-- /body-base -->
+  </div>
+
+  <!-- Ratio control -->
+  <div class="panel">
+    <div class="panel-header" onclick="togglePanel('ratio')">
+      <div class="panel-label">Interval ratio (f₂ / f₁)</div>
+      <button class="chevron-btn" id="chev-ratio">▾</button>
+    </div>
+    <div class="panel-body" id="body-ratio">
+
+    <div class="ratio-row">
+      <div class="ratio-inputs">
+        <input type="number" id="ratioN" value="3" min="1" max="64" step="1">
+        <span class="ratio-sep">∶</span>
+        <input type="number" id="ratioD" value="2" min="1" max="64" step="1">
+      </div>
+    </div>
+
+    <div class="slider-section" style="margin-top:14px;">
+      <input type="range" id="ratioSlider" min="0" max="1200" step="1" value="702">
+      <div class="slider-ticks">
+        <span>1∶1</span>
+        <span>2∶1</span>
+      </div>
+    </div>
+
+    <div class="ratio-row" style="margin-top:12px;">
+      <div class="ratio-result">
+        f₂ = <span class="freq-val" id="f2display">660.00</span> Hz
+        &nbsp;·&nbsp; <span id="ratioDecimal">1.5000</span>×
+        &nbsp;·&nbsp; <span id="centsInline">702</span>¢
+      </div>
+      <div id="octaveFoldNotice" style="display:none;font-size:0.68rem;color:var(--muted);margin-top:6px;">
+        folded to <span id="foldedRatio" style="color:var(--text);"></span> for axis
+      </div>
+    </div>
+
+    <div class="harmonicity-row">
+      <span class="harmonicity-label">Harmonicity</span>
+      <div class="harmonicity-track">
+        <div class="harmonicity-fill" id="harmonicityFill" style="width:60%"></div>
+      </div>
+      <span class="harmonicity-val" id="harmonicityVal">—</span>
+      <button class="info-btn" onclick="document.getElementById('harmTooltip').classList.add('visible')" title="What is this?">?</button>
+    </div>
+
+    <div style="margin-top:20px;">
+      <div class="panel-header" style="margin-bottom:0;" onclick="togglePanel('intervals')">
+        <div class="panel-label" style="margin-bottom:0;">Intervals</div>
+        <button class="chevron-btn" id="chev-intervals">▾</button>
+      </div>
+      <div class="panel-body" id="body-intervals">
+      <div style="margin-bottom:10px;margin-top:8px;">
+        <div style="display:flex;flex-wrap:wrap;gap:6px;" id="tuningToggle">
+          <button class="ratio-btn active-tuning" id="tuning-just"  onclick="setTuning('just')"  style="flex:1;min-width:80px;text-align:center;">Just</button>
+          <button class="ratio-btn"               id="tuning-pyth"  onclick="setTuning('pyth')"  style="flex:1;min-width:80px;text-align:center;">Pythagorean</button>
+          <button class="ratio-btn"               id="tuning-qcm"   onclick="setTuning('qcm')"   style="flex:1;min-width:80px;text-align:center;">Meantone</button>
+          <button class="ratio-btn"               id="tuning-12tet" onclick="setTuning('12tet')" style="flex:1;min-width:80px;text-align:center;">12-TET</button>
+          <button class="ratio-btn"               id="tuning-19tet" onclick="setTuning('19tet')" style="flex:1;min-width:80px;text-align:center;">19-TET</button>
+          <button class="ratio-btn"               id="tuning-31tet" onclick="setTuning('31tet')" style="flex:1;min-width:80px;text-align:center;">31-TET</button>
+        </div>
+      </div>
+      <div id="intervalGroups"></div>
+    </div><!-- /tuning inner -->
+    </div><!-- /body-intervals -->
+    </div><!-- /body-ratio -->
+  </div>
+
+  <!-- Oscillator + play -->
+  <div class="panel">
+    <div class="panel-header" onclick="togglePanel('play')">
+      <div class="panel-label">Playback</div>
+      <button class="chevron-btn" id="chev-play">▾</button>
+    </div>
+    <div class="panel-body" id="body-play">
+    <div class="toggle-row">
+      <span class="toggle-label">Oscillator</span>
+      <div class="toggle-group">
+        <button class="toggle-btn active" id="btnSine" onclick="setOsc('sine')">Sine</button>
+        <button class="toggle-btn" id="btnRich" onclick="setOsc('rich')">Rich</button>
+      </div>
+    </div>
+    <div class="toggle-row">
+      <span class="toggle-label">Beat tone</span>
+      <div class="toggle-group">
+        <button class="toggle-btn active" id="btnBeatsOff" onclick="setBeats(false)">Off</button>
+        <button class="toggle-btn" id="btnBeatsOn" onclick="setBeats(true)">On</button>
+      </div>
+      <span style="font-size:0.65rem;color:var(--muted);margin-left:10px;" id="beatHzDisplay"></span>
+    </div>
+    <div class="play-row">
+      <button class="play-btn" id="btnBoth" onclick="playBoth()">▶ Together</button>
+      <button class="play-btn" id="btnSeq" onclick="playSequential()">▶ In sequence</button>
+      <button class="play-btn stop-btn" onclick="stopAll()">■ Stop</button>
+    </div>
+    </div><!-- /body-play -->
+  </div>
+
+  <!-- Rhythm to Pitch -->
+  <div class="panel" id="bpmPanel">
+    <div class="panel-header" onclick="togglePanel('bpm')">
+      <div class="panel-label">Rhythm → Pitch</div>
+      <button class="chevron-btn" id="chev-bpm">▾</button>
+    </div>
+    <div class="panel-body" id="body-bpm">
+    <p style="font-size:0.68rem;color:var(--muted);margin-bottom:16px;line-height:1.6;">
+      Drag to sweep from rhythmic pulse to audible tone. The ratio stays fixed — only the speed changes.
+    </p>
+    <div class="bpm-track-wrap">
+      <input type="range" id="bpmSlider" min="0" max="1000" step="1" value="300"
+             style="width:100%;" oninput="onBpmSlider()">
+      <div class="bpm-zone-labels">
+        <span>20 BPM</span>
+        <span>↑ rhythm</span>
+        <span>~20 Hz threshold</span>
+        <span>pitch ↑</span>
+        <span id="bpmMaxLabel">f₁</span>
+      </div>
+    </div>
+    <div class="bpm-readout">
+      <div class="bpm-readout-box">
+        <div class="cb-label">f₁</div>
+        <div class="cb-val" id="bpmF1">—</div>
+      </div>
+      <div class="bpm-readout-box">
+        <div class="cb-label">f₂</div>
+        <div class="cb-val" id="bpmF2">—</div>
+      </div>
+      <div class="bpm-readout-box">
+        <div class="cb-label">Domain</div>
+        <div class="cb-val" id="bpmDomain">—</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;">
+      <button class="bpm-play-btn" id="bpmPlayBtn" onclick="toggleBpmPlay()">▶ Play</button>
+      <button class="bpm-play-btn stop" onclick="stopBpm()">■ Stop</button>
+    </div>
+    </div><!-- /body-bpm -->
+  </div>
+
+  <!-- Waveform -->
+  <div class="panel">
+    <div class="panel-header" onclick="togglePanel('viz')">
+      <div class="panel-label">Waveform</div>
+      <button class="chevron-btn" id="chev-viz">▾</button>
+    </div>
+    <div class="panel-body" id="body-viz">
+      <div class="canvas-wrap" style="margin-bottom:0;">
+        <canvas id="waveCanvas"></canvas>
+      </div>
+      <div class="phase-row" style="margin-top:10px;margin-bottom:10px;">
+        <span class="phase-label">Phase offset</span>
+        <input type="range" id="phaseSlider" min="0" max="360" step="1" value="0" style="flex:1;">
+        <span class="phase-val" id="phaseVal">0°</span>
+      </div>
+      <div class="canvas-wrap">
+        <canvas id="lissCanvas"></canvas>
+      </div>
+    </div><!-- /body-viz -->
+  </div>
+
+  <!-- Overtones -->
+  <div class="panel">
+    <div class="panel-header" onclick="togglePanel('ovt')">
+      <div class="panel-label">Overtones</div>
+      <button class="chevron-btn" id="chev-ovt">▾</button>
+    </div>
+    <div class="panel-body" id="body-ovt">
+      <div class="canvas-wrap">
+        <canvas id="overtoneCanvas"></canvas>
+      </div>
+    </div><!-- /body-ovt -->
+  </div>
+  <!-- Cents info -->
+  <div class="panel">
+    <div class="panel-header" onclick="togglePanel('tet')">
+      <div class="panel-label" id="tetLabel">12-TET context</div>
+      <div class="panel-header-right">
+        <div class="toggle-group" onclick="event.stopPropagation()">
+        <button class="toggle-btn active" id="tetBtn12" onclick="setTET(12)">12</button>
+        <button class="toggle-btn" id="tetBtn19" onclick="setTET(19)">19</button>
+        <button class="toggle-btn" id="tetBtn31" onclick="setTET(31)">31</button>
+        </div>
+        <button class="chevron-btn" id="chev-tet">▾</button>
+      </div>
+    </div>
+    <div class="panel-body" id="body-tet">
+    <div class="cents-panel">
+      <div class="cents-box">
+        <div class="cb-label">Nearest step</div>
+        <div class="cb-val" id="nearestNote">G</div>
+        <div class="cb-sub" id="nearestDev">+2¢ from 12-TET</div>
+      </div>
+      <div class="cents-bar-wrap">
+        <div class="cents-bar-label" id="centsBarLabel">Deviation from nearest step</div>
+        <div class="cents-bar-track">
+          <div class="cents-bar-center"></div>
+          <div class="cents-bar-fill" id="centsBarFill" style="left:50%;width:0%"></div>
+        </div>
+        <div class="cents-bar-ticks">
+          <span id="barTickL">−50¢</span><span>0</span><span id="barTickR">+50¢</span>
+        </div>
+      </div>
+    </div>
+    <div class="compare-row">
+      <span class="compare-label">A/B compare</span>
+      <button class="compare-btn" id="cmpJust" onclick="playComparison('just')">▶ Just</button>
+      <button class="compare-btn" id="cmpTET"  onclick="playComparison('tet')">▶ <span id="cmpTETlabel">12</span>-TET</button>
+      <button class="compare-btn" id="cmpAlt"  onclick="playComparison('alt')">▶ Alternate</button>
+      <button class="compare-btn" style="border-color:var(--accent2);color:var(--accent2);" onclick="stopAll()">■</button>
+    </div>
+    </div><!-- /body-tet -->
+  </div>
+
+</div>
+
+<!-- Harmonicity tooltip -->
+<div class="tooltip-overlay" id="harmTooltip" onclick="if(event.target===this)this.classList.remove('visible')">
+  <div class="tooltip-box">
+    <button class="tooltip-close" onclick="document.getElementById('harmTooltip').classList.remove('visible')">✕</button>
+    <h3>Tenney Harmonic Distance</h3>
+    <p>Two notes form a ratio <strong>n∶d</strong> (in lowest terms). The <strong>Tenney harmonic distance</strong> measures how "complex" that ratio is:</p>
+    <div class="tooltip-formula">HD(n∶d) = log₂(n × d)</div>
+    <p>Simple ratios like <strong>2∶1</strong> score low (log₂(2) ≈ 1.0) — they share many overtones and sound consonant. Complex ratios like <strong>45∶32</strong> score high (log₂(1440) ≈ 10.5) — few shared overtones, more dissonant.</p>
+    <p>The bar shows harmonic distance mapped to a 0–10 scale, inverted so <strong>longer = more consonant</strong>. Unison scores 0; the tritone sits near the top of the scale.</p>
+    <p style="color:#555;font-size:0.68rem;">After James Tenney, <em>A History of Consonance and Dissonance</em> (1988).</p>
+  </div>
+</div>
+
+<script>
+// ── Audio context ─────────────────────────────────────────────
+let ctx = null;
+let activeNodes = [];
+let animFrameId = null;
+let analyser = null;
+let oscType = 'sine';
+let playingBoth = false;
+let seqFreq = null; // currently playing frequency during sequential playback
+let beatsEnabled = false;
+let beatOscNode = null;
+let beatGainNode = null;
+
+const NOTE_NAMES = ['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
+const OCTAVE_NAMES = ['0','1','2','3','4','5','6','7','8'];
+
+// ── Theme ─────────────────────────────────────────────────────
+let manualThemeOverride = false;
+
+function getColor(varName) {
+  return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+}
+
+function setTheme(theme) {
+  if (theme === 'light') {
+    document.documentElement.setAttribute('data-theme', 'light');
+    document.getElementById('themeToggle').textContent = '☾';
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+    document.getElementById('themeToggle').textContent = '☀';
+  }
+  drawStaticWave();
+  drawOvertones();
+}
+
+function toggleTheme() {
+  const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+  const next = isLight ? 'dark' : 'light';
+  manualThemeOverride = true;
+  localStorage.setItem('ratioTheme', next);
+  setTheme(next);
+}
+
+function initTheme() {
+  const saved = localStorage.getItem('ratioTheme');
+  if (saved) {
+    manualThemeOverride = true;
+    setTheme(saved);
+  } else {
+    const mq = window.matchMedia('(prefers-color-scheme: light)');
+    setTheme(mq.matches ? 'light' : 'dark');
+    mq.addEventListener('change', e => {
+      if (!manualThemeOverride) setTheme(e.matches ? 'light' : 'dark');
+    });
+  }
+}
+
+function ensureCtx() {
+  if (!ctx) {
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    analyser = ctx.createAnalyser();
+    analyser.fftSize = 2048;
+    analyser.connect(ctx.destination);
+  }
+  if (ctx.state === 'suspended') ctx.resume();
+}
+
+function stopAll() {
+  activeNodes.forEach(n => { try { n.stop(); } catch(e){} });
+  activeNodes = [];
+  stopBeatTone();
+  if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
+  drawStaticWave();
+  playingBoth = false;
+  seqFreq = null;
+  document.getElementById('btnBoth').classList.remove('active');
+  document.getElementById('btnSeq').classList.remove('active');
+  document.getElementById('beatHzDisplay').textContent = '';
+}
+
+function stopBeatTone() {
+  if (beatOscNode) {
+    try { if (beatOscNode._lfo) beatOscNode._lfo.stop(); } catch(e){}
+    try { beatOscNode.stop(); } catch(e){}
+    beatOscNode = null;
+  }
+  if (beatGainNode) { try { beatGainNode.disconnect(); } catch(e){} beatGainNode = null; }
+}
+
+function setBeats(on) {
+  beatsEnabled = on;
+  document.getElementById('btnBeatsOn').classList.toggle('active', on);
+  document.getElementById('btnBeatsOff').classList.toggle('active', !on);
+  if (playingBoth) {
+    if (on) {
+      // Restart playback so the full reveal sequence fires properly
+      playBoth();
+    } else {
+      stopBeatTone();
+      document.getElementById('beatHzDisplay').textContent = '';
+    }
+  }
+}
+
+function dominantBeatHz() {
+  // Mirror logic from drawOvertones: find lowest-harmonic coincidence
+  const f1 = parseFloat(document.getElementById('baseFreq').value) || 440;
+  const sliderCents = parseFloat(document.getElementById('ratioSlider').value) || 0;
+  const ratio = Math.pow(2, sliderCents / 1200);
+  const f2 = f1 * ratio;
+  const PARTIALS = 16;
+  const THRESH = 6;
+  let best = null;
+  for (let i = 1; i <= PARTIALS; i++) {
+    for (let j = 1; j <= PARTIALS; j++) {
+      const fa = f1 * i, fb = f2 * j;
+      if (Math.abs(ratioToCents(fb / fa)) < THRESH) {
+        const beatHz = Math.abs(fa - fb);
+        const weight = 1 / (i * j);
+        if (!best || weight > best.weight) best = { beatHz, weight, i, j };
+      }
+    }
+  }
+  return best ? best.beatHz : Math.abs(f2 - f1);
+}
+
+function startBeatTone(revealSolo) {
+  // revealSolo: if true, play beat alone first then crossfade in fundamentals.
+  // This makes the beat tone unmistakably audible before it gets buried in the mix.
+  stopBeatTone();
+  ensureCtx();
+  const beatHz = dominantBeatHz();
+  const label = beatHz < 0.05 ? '~0 Hz (pure)' : beatHz.toFixed(2) + ' Hz';
+  document.getElementById('beatHzDisplay').textContent = label;
+  if (beatHz < 0.02) return; // truly pure — nothing to play
+
+  beatGainNode = ctx.createGain();
+  beatGainNode.connect(ctx.destination);
+
+  if (beatHz < 20) {
+    // Sub-20 Hz: click train is far more salient than AM modulation.
+    // Short sharp impulses at the beat rate — humans are exquisitely
+    // sensitive to amplitude transients even at low rates.
+    const carrier = ctx.createOscillator();
+    carrier.type = 'triangle'; // slightly richer than sine, cuts through better
+    carrier.frequency.value = 90; // sits below typical fundamentals
+
+    const modGain = ctx.createGain();
+    modGain.gain.value = 0;
+
+    const lfo = ctx.createOscillator();
+    lfo.type = 'sine';
+    lfo.frequency.value = beatHz;
+
+    const lfoGain = ctx.createGain();
+    lfoGain.gain.value = 0.32; // deeper modulation = punchier pulses
+
+    lfo.connect(lfoGain);
+    lfoGain.connect(modGain.gain);
+    carrier.connect(modGain);
+    modGain.connect(beatGainNode);
+
+    carrier.start(); lfo.start();
+    beatOscNode = carrier;
+    beatOscNode._lfo = lfo;
+    beatOscNode._lfoGain = lfoGain;
+    beatOscNode._modGain = modGain;
+  } else {
+    // Above 20 Hz: audible difference tone — use triangle for presence
+    const osc = ctx.createOscillator();
+    osc.type = 'triangle';
+    osc.frequency.value = beatHz;
+    osc.connect(beatGainNode);
+    osc.start();
+    beatOscNode = osc;
+  }
+
+  if (revealSolo) {
+    // === Beat reveal sequence ===
+    // Phase 1 (0–0.6s): beat tone alone, prominent
+    // Phase 2 (0.6–1.1s): fundamentals fade in, beat tone stays up
+    // Phase 3 (1.1s+): beat tone settles to background level
+    const now = ctx.currentTime;
+    const soloGain = beatHz < 20 ? 0.55 : 0.45;
+    const bgGain   = beatHz < 20 ? 0.28 : 0.22;
+    beatGainNode.gain.setValueAtTime(0, now);
+    beatGainNode.gain.linearRampToValueAtTime(soloGain, now + 0.08); // fast attack
+    beatGainNode.gain.setValueAtTime(soloGain, now + 0.6);           // hold solo
+    beatGainNode.gain.linearRampToValueAtTime(bgGain, now + 1.2);    // settle to bg
+
+    // Fundamentals start silent, fade in at 0.6s (when reveal ends)
+    activeNodes.forEach(n => {
+      // activeNodes are oscillators; their gain parent needs adjustment.
+      // We stored gain nodes separately — traverse via the analyser connection.
+    });
+    // We handle fundamental gain via the revealFundamentals flag checked in makeOscillator.
+    // Instead: schedule gain on the analyser's input gain nodes stored in beatRevealGains.
+    if (window._beatRevealGains) {
+      window._beatRevealGains.forEach(g => {
+        g.gain.setValueAtTime(0, now);
+        g.gain.linearRampToValueAtTime(0.28, now + 0.6 + 0.5); // fade in at 0.6s
+      });
+    }
+  } else {
+    beatGainNode.gain.setValueAtTime(beatHz < 20 ? 0.28 : 0.22, ctx.currentTime);
+  }
+}
+
+function setOsc(type) {
+  oscType = type;
+  document.getElementById('btnSine').classList.toggle('active', type === 'sine');
+  document.getElementById('btnRich').classList.toggle('active', type === 'rich');
+  if (playingBoth) {
+    playBoth();
+  } else {
+    stopAll();
+  }
+}
+
+function makeOscillator(freq, gainVal, scheduledGainNode) {
+  // scheduledGainNode: optional pre-built GainNode with already-scheduled automation.
+  // Used by playBoth() beat-reveal mode so fundamentals fade in after the reveal window.
+  ensureCtx();
+  const g = scheduledGainNode || ctx.createGain();
+  if (!scheduledGainNode) {
+    g.gain.setValueAtTime(0, ctx.currentTime);
+    g.gain.linearRampToValueAtTime(gainVal, ctx.currentTime + 0.015);
+  }
+  g.connect(analyser);
+
+  if (oscType === 'sine') {
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    osc.connect(g);
+    osc.start();
+    activeNodes.push(osc);
+    return osc;
+  } else {
+    // Additive: fundamental + harmonics with falloff
+    const partials = [1, 2, 3, 4, 5, 6];
+    const amps    = [1, 0.5, 0.25, 0.12, 0.06, 0.03];
+    partials.forEach((p, i) => {
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = freq * p;
+      const pg = ctx.createGain();
+      pg.gain.value = amps[i] * (scheduledGainNode ? 1.0 : gainVal);
+      osc.connect(pg);
+      pg.connect(scheduledGainNode ? g : analyser);
+      osc.start();
+      activeNodes.push(osc);
+    });
+  }
+}
+
+function playBoth() {
+  stopAll();
+  playingBoth = true;
+  document.getElementById('btnBoth').classList.add('active');
+  ensureCtx();
+  const f1 = parseFloat(document.getElementById('baseFreq').value) || 440;
+  const f2 = f1 * currentRatio();
+
+  if (beatsEnabled) {
+    // Beat reveal: fundamentals start silent and fade in after the reveal window (0.6s).
+    // This lets the user clearly hear the beat tone in isolation first.
+    const now = ctx.currentTime;
+    const revealEnd = 0.65;
+    window._beatRevealGains = [];
+    [f1, f2].forEach(freq => {
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0, now);
+      g.gain.linearRampToValueAtTime(0.0001, now + revealEnd);      // silent during reveal
+      g.gain.linearRampToValueAtTime(0.28, now + revealEnd + 0.5);  // smooth fade-in
+      window._beatRevealGains.push(g);
+      makeOscillator(freq, 0.28, g);
+    });
+    startBeatTone(true); // true = solo reveal mode
+  } else {
+    window._beatRevealGains = null;
+    makeOscillator(f1, 0.28);
+    makeOscillator(f2, 0.28);
+  }
+  startWaveLoop();
+}
+
+function playSequential() {
+  stopAll();
+  document.getElementById('btnSeq').classList.add('active');
+  ensureCtx();
+  const f1 = parseFloat(document.getElementById('baseFreq').value) || 220;
+  const f2 = f1 * currentRatio();
+  const dur = 0.9;
+
+  function playNote(freq, when) {
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0, when);
+    g.gain.linearRampToValueAtTime(0.35, when + 0.02);
+    g.gain.setValueAtTime(0.35, when + dur - 0.08);
+    g.gain.linearRampToValueAtTime(0, when + dur);
+    g.connect(analyser);
+
+    if (oscType === 'sine') {
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      osc.connect(g);
+      osc.start(when);
+      osc.stop(when + dur);
+      activeNodes.push(osc);
+    } else {
+      [1,2,3,4,5,6].forEach((p, i) => {
+        const amps = [1,0.5,0.25,0.12,0.06,0.03];
+        const osc = ctx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.value = freq * p;
+        const pg = ctx.createGain();
+        pg.gain.value = amps[i];
+        osc.connect(pg); pg.connect(g);
+        osc.start(when); osc.stop(when + dur);
+        activeNodes.push(osc);
+      });
+    }
+  }
+
+  seqFreq = f1; // any non-null value keeps waveform in live-buffer mode
+  playNote(f1, ctx.currentTime);
+  playNote(f2, ctx.currentTime + dur + 0.08);
+  startWaveLoop();
+  setTimeout(() => {
+    seqFreq = null;
+    document.getElementById('btnSeq').classList.remove('active');
+    if (!animFrameId) drawStaticWave();
+  }, (dur * 2 + 0.3) * 1000);
+}
+
+// ── Waveform ──────────────────────────────────────────────────
+let phaseOffset = 0; // radians
+
+
+function findTrigger(buf) {
+  // Find first rising zero-crossing after a short offset
+  const offset = 50;
+  for (let i = offset; i < buf.length - 1; i++) {
+    if (buf[i] <= 0 && buf[i + 1] > 0) return i;
+  }
+  return offset;
+}
+
+function drawLissajous(canvas) {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = canvas.offsetWidth * dpr;
+  canvas.height = canvas.offsetHeight * dpr;
+  const c = canvas.getContext('2d');
+  c.scale(dpr, dpr);
+  const W = canvas.offsetWidth, H = canvas.offsetHeight;
+  c.fillStyle = getColor('--bg'); c.fillRect(0, 0, W, H);
+
+  // Use actual decimal ratio so the figure reflects what's sounding.
+  // For irrational ratios (e.g. 12-TET thirds) this produces a slowly-
+  // precessing open curve rather than the false closed loop that integer
+  // approximation would give. We integrate enough cycles to show the
+  // precession clearly: lcm-approximation via gcd on rounded values,
+  // capped so it never goes infinite.
+  const ratio = currentRatio(); // e.g. 1.2599... for 400¢
+  const { n: ln, d: ld } = approxFraction(ratio, 64);
+  // Compute how many full periods of the slower frequency fill one visual loop.
+  // For true rationals this closes exactly; for irrationals we show ~4 periods
+  // of drift so the user can see the figure is open.
+  const irrational = Math.abs(ratio - ln/ld) > 0.0002;
+  const periods = irrational ? 4 : ld; // ld full cycles of f1 closes a rational figure
+  const N = Math.max(2048, periods * 512);
+
+  c.beginPath(); c.strokeStyle = getColor('--border'); c.lineWidth = 1;
+  c.moveTo(W/2, 0); c.lineTo(W/2, H); c.moveTo(0, H/2); c.lineTo(W, H/2); c.stroke();
+  const pad = 0.1, cx = W/2, cy = H/2;
+  const rx = W*(0.5-pad), ry = H*(0.5-pad);
+
+  // Fade older segments for irrational figures to show the precession direction
+  if (irrational) {
+    const segs = 6;
+    const segLen = Math.floor(N / segs);
+    for (let s = 0; s < segs; s++) {
+      const alpha = 0.15 + 0.85 * (s / (segs - 1));
+      c.beginPath();
+      c.strokeStyle = getColor('--accent');
+      c.globalAlpha = alpha;
+      c.lineWidth = 1.5;
+      if (s === segs - 1) { c.shadowBlur = 10; c.shadowColor = getColor('--accent') + '55'; }
+      const start = s * segLen, end = Math.min(start + segLen + 1, N);
+      for (let i = start; i < end; i++) {
+        const t = (i / N) * periods * 2 * Math.PI;
+        const x = cx + Math.sin(t) * rx;
+        const y = cy - Math.sin(ratio * t + phaseOffset) * ry;
+        i === start ? c.moveTo(x, y) : c.lineTo(x, y);
+      }
+      c.stroke();
+      c.shadowBlur = 0;
+    }
+    c.globalAlpha = 1;
+    // Label so the user knows why it's open
+    c.font = `${Math.round(9)}px 'DM Mono', monospace`;
+    c.fillStyle = getColor('--muted');
+    c.textAlign = 'left';
+    c.fillText('irrational — open curve', 8, H - 8);
+  } else {
+    c.beginPath(); c.strokeStyle = getColor('--accent'); c.lineWidth = 1.5;
+    c.shadowBlur = 10; c.shadowColor = getColor('--accent') + '55';
+    for (let i = 0; i <= N; i++) {
+      const t = (i / N) * periods * 2 * Math.PI;
+      const x = cx + Math.sin(t) * rx;
+      const y = cy - Math.sin(ratio * t + phaseOffset) * ry;
+      i === 0 ? c.moveTo(x, y) : c.lineTo(x, y);
+    }
+    c.stroke(); c.shadowBlur = 0;
+  }
+}
+
+function drawWaveform(canvas, buf) {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = canvas.offsetWidth * dpr;
+  canvas.height = canvas.offsetHeight * dpr;
+  const c = canvas.getContext('2d');
+  c.scale(dpr, dpr);
+  const W = canvas.offsetWidth, H = canvas.offsetHeight;
+  c.fillStyle = getColor('--bg'); c.fillRect(0, 0, W, H);
+  c.beginPath(); c.strokeStyle = getColor('--border'); c.lineWidth = 1;
+  c.moveTo(0, H/2); c.lineTo(W, H/2); c.stroke();
+  const f1 = parseFloat(document.getElementById('baseFreq').value) || 440;
+  const f2 = f1 * currentRatio();
+  const sr = ctx ? ctx.sampleRate : 44100;
+  if (seqFreq !== null) {
+    // Sequential mode: live buffer shows silence/attack/decay faithfully
+    c.beginPath(); c.strokeStyle = getColor('--accent'); c.lineWidth = 1.5;
+    c.shadowBlur = 8; c.shadowColor = getColor('--accent') + '66';
+    if (buf) {
+      const trigger = findTrigger(buf);
+      const drawCount = Math.min(buf.length - trigger, 1024);
+      for (let i = 0; i < drawCount; i++) {
+        const x = (i / drawCount) * W;
+        const y = (1 - (buf[trigger + i] + 1) / 2) * H;
+        i === 0 ? c.moveTo(x, y) : c.lineTo(x, y);
+      }
+    } else {
+      c.moveTo(0, H/2); c.lineTo(W, H/2); // flat line when no buffer
+    }
+    c.stroke(); c.shadowBlur = 0;
+  } else {
+    // Together or idle: synthetic composite
+    // Match the same time window as the live buffer (1024 samples) so
+    // the number of visible cycles is consistent with sequential mode
+    const windowSamples = 1024;
+    const N = windowSamples;
+    c.beginPath();
+    c.strokeStyle = playingBoth ? getColor('--accent') : getColor('--muted');
+    c.lineWidth = 1.5;
+    c.shadowBlur = playingBoth ? 8 : 0;
+    c.shadowColor = getColor('--accent') + '66';
+    for (let i = 0; i < N; i++) {
+      const t = i / sr;
+      const v = Math.sin(2*Math.PI*f1*t) + Math.sin(2*Math.PI*f2*t + phaseOffset);
+      const x = (i/N)*W, y = H/2 - (v/2)*(H*0.42);
+      i === 0 ? c.moveTo(x,y) : c.lineTo(x,y);
+    }
+    c.stroke(); c.shadowBlur = 0;
+  }
+}
+
+function startWaveLoop() {
+  function draw() {
+    animFrameId = requestAnimationFrame(draw);
+    const buf = new Float32Array(analyser.fftSize);
+    analyser.getFloatTimeDomainData(buf);
+    if (!isCollapsed('viz')) {
+      const lc = document.getElementById('lissCanvas');
+      const wc = document.getElementById('waveCanvas');
+      if (lc) drawLissajous(lc);
+      if (wc) drawWaveform(wc, buf);
+    }
+  }
+  draw();
+}
+
+
+function drawOvertones() {
+  const canvas = document.getElementById('overtoneCanvas');
+  if (!canvas || isCollapsed('ovt')) return;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = canvas.offsetWidth * dpr;
+  canvas.height = canvas.offsetHeight * dpr;
+  const c = canvas.getContext('2d');
+  c.scale(dpr, dpr);
+  const W = canvas.offsetWidth, H = canvas.offsetHeight;
+
+  c.fillStyle = getColor('--bg');
+  c.fillRect(0, 0, W, H);
+
+  const f1 = parseFloat(document.getElementById('baseFreq').value) || 440;
+  // Use the raw decimal ratio for beat computation, not the integer approximation.
+  // approxFraction would zero out all beats by construction.
+  const cents = parseFloat(document.getElementById('ratioSlider').value) || 0;
+  const ratio = Math.pow(2, cents / 1200);
+  const f2 = f1 * ratio;
+  const PARTIALS = 16;
+  const THRESH = 6; // cents for coincidence
+
+  const fMin = f1 * 0.85;
+  const fMax = f1 * (PARTIALS + 1);
+  function fToX(f) {
+    return ((Math.log2(f) - Math.log2(fMin)) / (Math.log2(fMax) - Math.log2(fMin))) * W;
+  }
+
+  const row1Y = H * 0.28;
+  const row2Y = H * 0.62;
+  const lineH = H * 0.18;
+
+  const f1parts = Array.from({length: PARTIALS}, (_, i) => f1 * (i + 1));
+  const f2parts = Array.from({length: PARTIALS}, (_, i) => f2 * (i + 1));
+
+  // ── Find all near-coincidences with beat frequencies ─────────
+  // beat Hz = |i*f1 - j*f2|, weighted by amplitude i*j (lower = louder)
+  const coincidences = []; // { x, beatHz, i, j, ampWeight }
+  f1parts.forEach((fa, i) => {
+    f2parts.forEach((fb, j) => {
+      if (Math.abs(ratioToCents(fb / fa)) < THRESH) {
+        const beatHz = Math.abs(fa - fb);
+        const x = fToX((fa + fb) / 2);
+        coincidences.push({ x, beatHz, i: i+1, j: j+1, ampWeight: 1/((i+1)*(j+1)) });
+      }
+    });
+  });
+
+  // Dominant coincidence = highest ampWeight (lowest harmonic numbers)
+  coincidences.sort((a, b) => b.ampWeight - a.ampWeight);
+  const dominant = coincidences[0] || null;
+
+  // ── Draw partials ─────────────────────────────────────────────
+  function drawPartials(parts, otherParts, rowY, color) {
+    parts.forEach((freq, i) => {
+      const amp = 1 / (i + 1);
+      const x = fToX(freq);
+      if (x < -2 || x > W + 2) return;
+      const coincides = otherParts.some(fp => Math.abs(ratioToCents(fp / freq)) < THRESH);
+      c.beginPath();
+      c.strokeStyle = coincides ? getColor('--text') : color;
+      c.globalAlpha = coincides ? 1.0 : Math.max(0.18, amp * 0.9);
+      c.lineWidth = Math.max(1.5, amp * 5);
+      if (coincides) { c.shadowBlur = 12; c.shadowColor = getColor('--text') + '99'; }
+      c.moveTo(x, rowY - lineH / 2);
+      c.lineTo(x, rowY + lineH / 2);
+      c.stroke();
+      c.shadowBlur = 0;
+    });
+  }
+
+  drawPartials(f1parts, f2parts, row1Y, getColor('--accent'));
+  drawPartials(f2parts, f1parts, row2Y, getColor('--accent3'));
+  c.globalAlpha = 1;
+
+  // ── Beat frequency labels between the rows ────────────────────
+  // Color by beat rate: <2 Hz = slow (green), 2-8 Hz = mid (yellow), >8 Hz = fast (red-ish)
+  function beatColor(hz) {
+    if (hz < 0.5) return getColor('--beat-1');   // near-pure, barely perceptible
+    if (hz < 2)   return getColor('--beat-2');   // slow, pleasant shimmer
+    if (hz < 6)   return getColor('--beat-3');   // moderate, audible rhythm
+    if (hz < 12)  return getColor('--beat-4');   // fast, roughness threshold
+    return getColor('--beat-5');                  // very fast, dissonant roughness
+  }
+
+  const midY = (row1Y + row2Y) / 2;
+  coincidences.forEach(({ x, beatHz, i, j }) => {
+    if (x < 10 || x > W - 10) return;
+    const isDom = (dominant && i === dominant.i && j === dominant.j);
+    const label = beatHz < 0.05 ? '~0 Hz' : beatHz.toFixed(1) + ' Hz';
+    c.font = isDom
+      ? `bold ${Math.round(8.5)}px 'DM Mono', monospace`
+      : `${Math.round(7.5)}px 'DM Mono', monospace`;
+    c.fillStyle = beatColor(beatHz);
+    c.globalAlpha = isDom ? 1.0 : 0.7;
+    c.textAlign = 'center';
+    c.fillText(label, x, midY + 4);
+
+    // Tick marks connecting to the two rows
+    c.beginPath();
+    c.strokeStyle = getColor('--border');
+    c.lineWidth = 1;
+    c.globalAlpha = 0.5;
+    c.moveTo(x, row1Y + lineH / 2 + 2);
+    c.lineTo(x, midY - 8);
+    c.moveTo(x, row2Y - lineH / 2 - 2);
+    c.lineTo(x, midY + 10);
+    c.stroke();
+    c.globalAlpha = 1;
+  });
+  c.textAlign = 'left';
+
+  // ── Row labels ────────────────────────────────────────────────
+  c.font = `9px 'DM Mono', monospace`;
+  c.fillStyle = getColor('--muted');
+  c.fillText('f₁', 3, row1Y + 3);
+  c.fillText('f₂', 3, row2Y + 3);
+
+  // ── Dominant beat summary ─────────────────────────────────────
+  c.font = `8px 'DM Mono', monospace`;
+  if (dominant) {
+    const label = dominant.beatHz < 0.05
+      ? `dominant: ${dominant.i}×f₁ / ${dominant.j}×f₂ — ~0 Hz (pure)`
+      : `dominant: ${dominant.i}×f₁ / ${dominant.j}×f₂ — ${dominant.beatHz.toFixed(2)} Hz`;
+    c.fillStyle = beatColor(dominant.beatHz);
+    c.fillText(label, 3, H - 6);
+  } else {
+    c.fillStyle = getColor('--muted');
+    c.fillText('no coinciding overtones in first 16 partials', 3, H - 6);
+  }
+}
+
+function drawStaticWave() {
+  const lc = document.getElementById('lissCanvas');
+  const wc = document.getElementById('waveCanvas');
+  if (lc) drawLissajous(lc);
+  if (wc) drawWaveform(wc, null);
+}
+
+
+// ── Ratio logic ───────────────────────────────────────────────
+function currentRatio() {
+  const n = parseFloat(document.getElementById('ratioN').value) || 1;
+  const d = parseFloat(document.getElementById('ratioD').value) || 1;
+  return n / d;
+}
+
+// cents → ratio
+function centsToRatio(c) { return Math.pow(2, c / 1200); }
+function ratioToCents(r) { return 1200 * Math.log2(r); }
+
+function freqToNoteName(freq) {
+  const A4 = 440;
+  const semis = Math.round(12 * Math.log2(freq / A4));
+  const noteIdx = ((semis % 12) + 12 + 9) % 12; // A=9
+  const octave = Math.floor(semis / 12) + 4;
+  return NOTE_NAMES[noteIdx] + octave;
+}
+
+// ── TET system ───────────────────────────────────────────────
+let tetDivisions = 12;
+
+// 12-TET uses note letter names; 19 and 31 use degree numbers
+// (no universally accepted enharmonic spelling for either)
+function nearestStepName(stepIndex, divisions) {
+  if (divisions === 12) {
+    return NOTE_NAMES[((stepIndex % 12) + 12) % 12];
+  }
+  return 'step ' + (((stepIndex % divisions) + divisions) % divisions);
+}
+
+function setTET(n) {
+  tetDivisions = n;
+  [12, 19, 31].forEach(d => {
+    document.getElementById('tetBtn' + d).classList.toggle('active', d === n);
+  });
+  document.getElementById('tetLabel').textContent = n + '-TET context';
+  document.getElementById('cmpTETlabel').textContent = n;
+  updateDisplay(currentRatio());
+  if (typeof pushHash !== 'undefined') pushHash();
+}
+
+function playComparison(which) {
+  stopAll();
+  ensureCtx();
+  const f1 = parseFloat(document.getElementById('baseFreq').value) || 440;
+  const justRatio = currentRatio();
+  const cents = ratioToCents(justRatio);
+  const stepCents = 1200 / tetDivisions;
+  const tetRatio = centsToRatio(Math.round(cents / stepCents) * stepCents);
+  const dur = 1.1;
+  const gap = 0.08;
+
+  function scheduleNote(freq, when) {
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0, when);
+    g.gain.linearRampToValueAtTime(0.32, when + 0.02);
+    g.gain.setValueAtTime(0.32, when + dur - 0.08);
+    g.gain.linearRampToValueAtTime(0, when + dur);
+    g.connect(analyser);
+    [1,2,3,4,5,6].forEach((p, i) => {
+      const amps = oscType === 'sine' ? [1,0,0,0,0,0] : [1,0.5,0.25,0.12,0.06,0.03];
+      if (amps[i] === 0) return;
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = freq * p;
+      const pg = ctx.createGain();
+      pg.gain.value = amps[i];
+      osc.connect(pg); pg.connect(g);
+      osc.start(when); osc.stop(when + dur);
+      activeNodes.push(osc);
+    });
+    // also play f1
+    const g2 = ctx.createGain();
+    g2.gain.setValueAtTime(0, when);
+    g2.gain.linearRampToValueAtTime(0.22, when + 0.02);
+    g2.gain.setValueAtTime(0.22, when + dur - 0.08);
+    g2.gain.linearRampToValueAtTime(0, when + dur);
+    g2.connect(analyser);
+    const osc0 = ctx.createOscillator();
+    osc0.type = 'sine';
+    osc0.frequency.value = f1;
+    osc0.connect(g2); osc0.start(when); osc0.stop(when + dur);
+    activeNodes.push(osc0);
+  }
+
+  const sequences = {
+    just:      [[justRatio, 0]],
+    tet:       [[tetRatio,  0]],
+    alt:       [[justRatio, 0], [tetRatio, dur + gap], [justRatio, (dur + gap)*2], [tetRatio, (dur + gap)*3]]
+  };
+
+  const btn = document.getElementById('cmp' + which.charAt(0).toUpperCase() + which.slice(1));
+  if (btn) btn.classList.add('active');
+
+  const seq = sequences[which];
+  const totalDur = seq[seq.length-1][1] + dur;
+  seq.forEach(([ratio, when]) => scheduleNote(f1 * ratio, ctx.currentTime + when));
+  startWaveLoop();
+  setTimeout(() => {
+    if (btn) btn.classList.remove('active');
+    stopAll();
+  }, totalDur * 1000 + 200);
+}
+
+function updateDisplay(ratio) {
+  const f1 = parseFloat(document.getElementById('baseFreq').value) || 220;
+  const f2 = f1 * ratio;
+  document.getElementById('f2display').textContent = f2.toFixed(2);
+  document.getElementById('ratioDecimal').textContent = ratio.toFixed(4);
+  document.getElementById('baseNote').textContent = freqToNoteName(f1);
+
+  const cents = ratioToCents(ratio);
+  document.getElementById('centsInline').textContent = Math.round(cents);
+
+  // Harmonicity (Tenney distance): HD = log2(n*d), lower = more consonant
+  const { n: hn, d: hd } = approxFraction(ratio <= 0 ? 1 : ratio, 64);
+  const hdVal = Math.log2(Math.max(1, hn * hd));
+  const HD_MAX = 10.5;
+  const hPct = Math.max(0, Math.min(100, (1 - hdVal / HD_MAX) * 100));
+  document.getElementById('harmonicityFill').style.width = hPct + '%';
+  document.getElementById('harmonicityVal').textContent = hdVal.toFixed(1);
+  drawOvertones();
+
+  const stepCents = 1200 / tetDivisions;
+  const steps = cents / stepCents;
+  const nearestStep = Math.round(steps);
+  const deviation = cents - nearestStep * stepCents;
+  const halfStep = stepCents / 2;
+
+  document.getElementById('nearestNote').textContent = nearestStepName(nearestStep, tetDivisions);
+  const devSign = deviation >= 0 ? '+' : '';
+  document.getElementById('nearestDev').textContent =
+    `${devSign}${deviation.toFixed(1)}¢ from ${tetDivisions}-TET`;
+
+  const pctNorm = Math.max(-50, Math.min(50, deviation));
+  const fill = document.getElementById('centsBarFill');
+  if (pctNorm >= 0) {
+    fill.style.left = '50%';
+    fill.style.width = pctNorm + '%';
+  } else {
+    fill.style.left = (50 + pctNorm) + '%';
+    fill.style.width = (-pctNorm) + '%';
+  }
+  fill.style.background = '#c8f060';
+
+  document.getElementById('centsBarLabel').textContent =
+    `Deviation from nearest ${tetDivisions}-TET step`;
+  document.getElementById('barTickL').textContent = '−50¢';
+  document.getElementById('barTickR').textContent = '+50¢';
+
+}
+
+function foldToOctave(ratio) {
+  let r = ratio;
+  if (r <= 0) return 1;
+  while (r < 1) r *= 2;
+  while (r > 2) r /= 2;
+  return r;
+}
+
+function updateFromRatio() {
+  const ratio = currentRatio();
+  const folded = foldToOctave(ratio);
+  const outOfRange = Math.abs(ratio - folded) > 1e-9;
+  const cents = ratioToCents(folded);
+  document.getElementById('ratioSlider').value = Math.round(Math.max(0, Math.min(1200, cents)));
+
+  const notice = document.getElementById('octaveFoldNotice');
+  if (outOfRange) {
+    const { n, d } = approxFraction(folded, 64);
+    document.getElementById('foldedRatio').textContent = n + '∶' + d;
+    notice.style.display = 'block';
+  } else {
+    notice.style.display = 'none';
+  }
+
+  updateDisplay(folded);
+}
+
+function updateFromSlider() {
+  const cents = parseFloat(document.getElementById('ratioSlider').value);
+  const ratio = centsToRatio(cents);
+  // Find simplest fraction approximation
+  const { n, d } = approxFraction(ratio, 64);
+  document.getElementById('ratioN').value = n;
+  document.getElementById('ratioD').value = d;
+  updateDisplay(ratio);
+}
+
+function approxFraction(x, maxD) {
+  // Stern-Brocot / Farey
+  let bestN = 1, bestD = 1, bestErr = Math.abs(x - 1);
+  for (let d = 1; d <= maxD; d++) {
+    const n = Math.round(x * d);
+    if (n < 1) continue;
+    const err = Math.abs(x - n/d);
+    if (err < bestErr) { bestErr = err; bestN = n; bestD = d; }
+  }
+  return { n: bestN, d: bestD };
+}
+
+// ── Tuning systems ────────────────────────────────────────────
+const FIFTH_QCM = Math.pow(5, 0.25);
+function qcmFifths(n) {
+  let r = Math.pow(FIFTH_QCM, n);
+  while (r > 2) r /= 2;
+  while (r < 1) r *= 2;
+  return r;
+}
+
+const TUNINGS = {
+  just: {
+    label: 'Just intonation (5-limit)',
+    scale: [
+      { name: 'Octave',      ratio: 2/1 },
+      { name: 'Perfect 5th', ratio: 3/2 },
+      { name: 'Perfect 4th', ratio: 4/3 },
+      { name: 'Major 3rd',   ratio: 5/4 },
+      { name: 'Major 6th',   ratio: 5/3 },
+      { name: 'Major 2nd',   ratio: 9/8 },
+      { name: 'Major 7th',   ratio: 15/8 },
+    ]
+  },
+  pyth: {
+    label: 'Pythagorean (stacked 3∶2 fifths)',
+    scale: [
+      { name: 'Octave',      ratio: 2/1 },
+      { name: 'Perfect 5th', ratio: 3/2 },
+      { name: 'Perfect 4th', ratio: 4/3 },
+      { name: 'Major 3rd',   ratio: 81/64 },
+      { name: 'Major 6th',   ratio: 27/16 },
+      { name: 'Major 2nd',   ratio: 9/8 },
+      { name: 'Major 7th',   ratio: 243/128 },
+    ]
+  },
+  qcm: {
+    label: 'Quarter-comma meantone',
+    scale: [
+      { name: 'Octave',      ratio: 2/1 },
+      { name: 'Perfect 5th', ratio: qcmFifths(1) },
+      { name: 'Perfect 4th', ratio: qcmFifths(-1) },
+      { name: 'Major 3rd',   ratio: qcmFifths(4) },
+      { name: 'Major 6th',   ratio: qcmFifths(3) },
+      { name: 'Major 2nd',   ratio: qcmFifths(2) },
+      { name: 'Major 7th',   ratio: qcmFifths(5) },
+    ]
+  },
+  '12tet': {
+    label: '12-tone equal temperament',
+    scale: [
+      { name: 'Octave',      ratio: Math.pow(2, 12/12) },
+      { name: 'Perfect 5th', ratio: Math.pow(2, 7/12) },
+      { name: 'Perfect 4th', ratio: Math.pow(2, 5/12) },
+      { name: 'Major 3rd',   ratio: Math.pow(2, 4/12) },
+      { name: 'Major 6th',   ratio: Math.pow(2, 9/12) },
+      { name: 'Major 2nd',   ratio: Math.pow(2, 2/12) },
+      { name: 'Major 7th',   ratio: Math.pow(2, 11/12) },
+    ]
+  },
+  '19tet': {
+    label: '19-tone equal temperament',
+    scale: [
+      { name: 'Octave',      ratio: Math.pow(2, 19/19) },
+      { name: 'Perfect 5th', ratio: Math.pow(2, 11/19) },
+      { name: 'Perfect 4th', ratio: Math.pow(2, 8/19) },
+      { name: 'Major 3rd',   ratio: Math.pow(2, 6/19) },
+      { name: 'Major 6th',   ratio: Math.pow(2, 14/19) },
+      { name: 'Major 2nd',   ratio: Math.pow(2, 3/19) },
+      { name: 'Major 7th',   ratio: Math.pow(2, 17/19) },
+    ]
+  },
+  '31tet': {
+    label: '31-tone equal temperament',
+    scale: [
+      { name: 'Octave',      ratio: Math.pow(2, 31/31) },
+      { name: 'Perfect 5th', ratio: Math.pow(2, 18/31) },
+      { name: 'Perfect 4th', ratio: Math.pow(2, 13/31) },
+      { name: 'Major 3rd',   ratio: Math.pow(2, 10/31) },
+      { name: 'Major 6th',   ratio: Math.pow(2, 23/31) },
+      { name: 'Major 2nd',   ratio: Math.pow(2, 5/31) },
+      { name: 'Major 7th',   ratio: Math.pow(2, 28/31) },
+    ]
+  }
+};
+
+// Interval groups — scale-dependent entries use null ratio (filled from current tuning)
+// Groups in ascending interval order
+const INTERVAL_GROUPS = [
+  { name: 'Unison',       fixed: 1/1 },
+  { name: 'Minor 2nd',    fixed: 16/15 },
+  { name: 'Major 2nd',    scale: 'Major 2nd' },
+  { name: 'Minor 3rd',    fixed: 6/5 },
+  { name: 'Neutral 3rd',  fixed: 11/9 },
+  { name: 'Major 3rd',    scale: 'Major 3rd' },
+  { name: 'Perfect 4th',  scale: 'Perfect 4th' },
+  { name: 'Tritone',      fixed: 45/32 },
+  { name: 'Perfect 5th',  scale: 'Perfect 5th' },
+  { name: 'Minor 6th',    fixed: 8/5 },
+  { name: 'Major 6th',    scale: 'Major 6th' },
+  { name: 'Minor 7th',    fixed: 16/9 },
+  { name: 'Natural 7th',  fixed: 7/4 },
+  { name: 'Major 7th',    scale: 'Major 7th' },
+  { name: 'Octave',       scale: 'Octave' },
+];
+
+let currentTuning = 'just';
+
+function ratioDesc(r) {
+  const { n, d } = approxFraction(r, 64);
+  if (Math.abs(n / d - r) < 1e-6) return n + '∶' + d;
+  return Math.round(1200 * Math.log2(r)) + '¢';
+}
+
+function setTuning(key) {
+  currentTuning = key;
+  ['just','pyth','qcm','12tet','19tet','31tet'].forEach(k => {
+    const btn = document.getElementById('tuning-' + k);
+    if (btn) {
+      btn.classList.toggle('active-tuning', k === key);
+      btn.style.color = k === key ? 'var(--accent)' : '';
+      btn.style.borderColor = k === key ? 'var(--accent)' : '';
+    }
+  });
+  buildNamedRatios();
+  if (typeof pushHash !== 'undefined') pushHash();
+}
+
+
+function buildRatioBtn(name, ratio, container) {
+  const btn = document.createElement('button');
+  btn.className = 'ratio-btn';
+  btn.innerHTML = `<span class="btn-name">${name}</span>${ratioDesc(ratio)}`;
+  btn.onclick = () => {
+    stopAll();
+    // Set slider to exact cents position
+    const cents = ratioToCents(ratio);
+    document.getElementById('ratioSlider').value = Math.round(Math.max(0, Math.min(1200, cents)));
+    // Set integer inputs to best simple approximation (max denom 64 keeps inputs sane)
+    const { n, d } = approxFraction(ratio, 64);
+    document.getElementById('ratioN').value = n;
+    document.getElementById('ratioD').value = d;
+    // Call updateDisplay with the exact ratio directly — bypasses currentRatio()
+    // so irrational tunings (QCM, 12-TET) keep their precise values
+    const folded = foldToOctave(ratio);
+    const outOfRange = Math.abs(ratio - folded) > 1e-9;
+    const notice = document.getElementById('octaveFoldNotice');
+    if (outOfRange) {
+      const { n: fn, d: fd } = approxFraction(folded, 64);
+      document.getElementById('foldedRatio').textContent = fn + '∶' + fd;
+      notice.style.display = 'block';
+    } else {
+      notice.style.display = 'none';
+    }
+    updateDisplay(folded);
+    if (!animFrameId) drawStaticWave();
+    drawOvertones();
+  };
+  container.appendChild(btn);
+}
+
+function buildNamedRatios() {
+  const container = document.getElementById('intervalGroups');
+  container.innerHTML = '';
+  const tuning = TUNINGS[currentTuning];
+  const scaleMap = {};
+  tuning.scale.forEach(iv => { scaleMap[iv.name] = iv.ratio; });
+
+  const btnRow = document.createElement('div');
+  btnRow.className = 'named-ratios';
+  INTERVAL_GROUPS.forEach(iv => {
+    const ratio = iv.fixed !== undefined ? iv.fixed : scaleMap[iv.scale];
+    if (ratio !== undefined) buildRatioBtn(iv.name, ratio, btnRow);
+  });
+  container.appendChild(btnRow);
+}
+
+// ── Rhythm → Pitch ───────────────────────────────────────────
+// Slider maps 0–1000 to f1 range 20/60 Hz (20 BPM) → 880 Hz on a log scale
+let bpmPlaying = false;
+let bpmNodes = []; // oscillators or click schedulers
+let bpmClickTimeout = null;
+let bpmScheduleTimeout = null;
+
+function bpmSliderToF1(val) {
+  // log scale: 0 → 20 BPM (~0.333 Hz), 1000 → base frequency
+  const minF = 20 / 60; // 20 BPM in Hz
+  const maxF = parseFloat(document.getElementById('baseFreq').value) || 440;
+  return minF * Math.pow(maxF / minF, val / 1000);
+}
+
+function f1ToBpmDisplay(f) {
+  if (f < 20) return (f * 60).toFixed(1) + ' BPM';
+  return f.toFixed(1) + ' Hz';
+}
+
+function domainLabel(f) {
+  if (f < 8)  return 'Rhythm';
+  if (f < 20) return 'Flutter';
+  if (f < 60) return 'Sub-bass';
+  return 'Pitch';
+}
+
+function onBpmSlider() {
+  const val = parseFloat(document.getElementById('bpmSlider').value);
+  const f1 = bpmSliderToF1(val);
+  const ratio = currentRatio();
+  const f2 = f1 * ratio;
+  document.getElementById('bpmF1').textContent = f1ToBpmDisplay(f1);
+  document.getElementById('bpmF2').textContent = f1ToBpmDisplay(f2);
+  document.getElementById('bpmDomain').textContent = domainLabel(f1);
+  const maxF = parseFloat(document.getElementById('baseFreq').value) || 440;
+  const maxEl = document.getElementById('bpmMaxLabel');
+  if (maxEl) maxEl.textContent = maxF + ' Hz';
+  if (bpmPlaying) restartBpmPlay();
+}
+
+function stopBpm() {
+  bpmPlaying = false;
+  bpmNodes.forEach(n => { try { n.stop(); } catch(e){} });
+  bpmNodes = [];
+  if (bpmClickTimeout) { clearTimeout(bpmClickTimeout); bpmClickTimeout = null; }
+  if (bpmScheduleTimeout) { clearTimeout(bpmScheduleTimeout); bpmScheduleTimeout = null; }
+  document.getElementById('bpmPlayBtn').classList.remove('active');
+  document.getElementById('bpmPlayBtn').textContent = '▶ Play';
+}
+
+function toggleBpmPlay() {
+  if (bpmPlaying) { stopBpm(); return; }
+  bpmPlaying = true;
+  document.getElementById('bpmPlayBtn').classList.add('active');
+  document.getElementById('bpmPlayBtn').textContent = '■ Stop';
+  ensureCtx();
+  onBpmSlider(); // update display
+  restartBpmPlay();
+}
+
+function restartBpmPlay() {
+  // Stop existing nodes cleanly then restart
+  bpmNodes.forEach(n => { try { n.stop(); } catch(e){} });
+  bpmNodes = [];
+  if (bpmClickTimeout) { clearTimeout(bpmClickTimeout); bpmClickTimeout = null; }
+  if (bpmScheduleTimeout) { clearTimeout(bpmScheduleTimeout); bpmScheduleTimeout = null; }
+
+  const val = parseFloat(document.getElementById('bpmSlider').value);
+  const f1 = bpmSliderToF1(val);
+  const ratio = currentRatio();
+  const f2 = f1 * ratio;
+
+  if (f1 >= 18) {
+    // Pitch domain — plain oscillators
+    [f1, f2].forEach((freq, idx) => {
+      const g = ctx.createGain();
+      g.gain.value = 0.22;
+      g.connect(ctx.destination);
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      osc.connect(g);
+      osc.start();
+      bpmNodes.push(osc);
+    });
+  } else {
+    // Rhythm domain — schedule click pairs
+    scheduleClicks(f1, f2);
+  }
+}
+
+function scheduleClicks(f1, f2) {
+  if (!bpmPlaying) return;
+  // Use Web Audio scheduling for tight timing
+  // Schedule a short burst of clicks ahead of time
+  const now = ctx.currentTime;
+  const scheduleAhead = 0.5; // seconds
+  const interval1 = 1 / f1;
+  const interval2 = 1 / f2;
+
+  // Schedule ~scheduleAhead seconds worth of clicks for each voice
+  function scheduleVoice(interval, freq, gainVal) {
+    let t = now;
+    while (t < now + scheduleAhead) {
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(gainVal, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
+      g.connect(ctx.destination);
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      osc.connect(g);
+      osc.start(t);
+      osc.stop(t + 0.035);
+      bpmNodes.push(osc);
+      t += interval;
+    }
+  }
+
+  scheduleVoice(interval1, 220, 0.3);
+  scheduleVoice(interval2, 330, 0.25);
+
+  // Re-schedule before the buffer runs out
+  bpmScheduleTimeout = setTimeout(() => {
+    if (!bpmPlaying) return;
+    // Check if still in rhythm domain
+    const v = parseFloat(document.getElementById('bpmSlider').value);
+    const newF1 = bpmSliderToF1(v);
+    if (newF1 < 18) {
+      scheduleClicks(newF1, newF1 * currentRatio());
+    } else {
+      restartBpmPlay();
+    }
+  }, (scheduleAhead - 0.05) * 1000);
+}
+
+// ── Panel collapse ───────────────────────────────────────────
+const PANEL_STORAGE_KEY = 'ratioExplorerPanels';
+
+function loadPanelStates() {
+  try { return JSON.parse(localStorage.getItem(PANEL_STORAGE_KEY)) || {}; } catch(e) { return {}; }
+}
+
+function savePanelState(id, collapsed) {
+  const states = loadPanelStates();
+  states[id] = collapsed;
+  try { localStorage.setItem(PANEL_STORAGE_KEY, JSON.stringify(states)); } catch(e) {}
+}
+
+function isCollapsed(id) {
+  const body = document.getElementById('body-' + id);
+  return body ? body.classList.contains('collapsed') : false;
+}
+
+function togglePanel(id) {
+  const body = document.getElementById('body-' + id);
+  const chev = document.getElementById('chev-' + id);
+  if (!body) return;
+  const collapsed = !body.classList.contains('collapsed');
+  body.classList.toggle('collapsed', collapsed);
+  if (chev) chev.classList.toggle('collapsed', collapsed);
+  // Tighten panel padding when collapsed
+  const panel = body.closest('.panel');
+  if (panel) panel.classList.toggle('panel-collapsed', collapsed);
+  savePanelState(id, collapsed);
+  if (!collapsed) {
+    if (id === 'viz') { if (!animFrameId) drawStaticWave(); }
+    if (id === 'ovt') drawOvertones();
+  }
+}
+
+function initPanelStates() {
+  const states = loadPanelStates();
+  ['base','ratio','intervals','play','bpm','viz','ovt','tet'].forEach(id => {
+    if (states[id]) {
+      const body = document.getElementById('body-' + id);
+      const chev = document.getElementById('chev-' + id);
+      if (body) {
+        body.classList.add('collapsed');
+        const panel = body.closest('.panel');
+        if (panel) panel.classList.add('panel-collapsed');
+      }
+      if (chev) chev.classList.add('collapsed');
+    }
+  });
+}
+
+// ── Event listeners ───────────────────────────────────────────
+document.getElementById('ratioN').addEventListener('input', () => { stopAll(); stopBpm(); updateFromRatio(); onBpmSlider(); });
+document.getElementById('ratioD').addEventListener('input', () => { stopAll(); updateFromRatio(); });
+document.getElementById('ratioSlider').addEventListener('input', () => { stopAll(); stopBpm(); updateFromSlider(); onBpmSlider(); });
+document.getElementById('baseFreq').addEventListener('input', () => {
+  updateDisplay(currentRatio());
+  const f = parseFloat(document.getElementById('baseFreq').value) || 440;
+  document.getElementById('bpmMaxLabel').textContent = f + ' Hz';
+  onBpmSlider();
+});
+document.getElementById('phaseSlider').addEventListener('input', () => {
+  phaseOffset = parseFloat(document.getElementById('phaseSlider').value) * Math.PI / 180;
+  document.getElementById('phaseVal').textContent = document.getElementById('phaseSlider').value + '°';
+  if (!animFrameId) drawStaticWave();
+});
+
+
+// ── Shareable URL ─────────────────────────────────────────────
+function stateToHash() {
+  const n = document.getElementById('ratioN').value;
+  const d = document.getElementById('ratioD').value;
+  const f = document.getElementById('baseFreq').value;
+  const ph = Math.round(phaseOffset * 180 / Math.PI);
+  const panels = loadPanelStates();
+  const collapsed = Object.entries(panels).filter(([,v])=>v).map(([k])=>k).join(',');
+  const parts = [
+    'r=' + n + ':' + d,
+    'f=' + f,
+    't=' + currentTuning,
+    'tet=' + tetDivisions,
+    'ph=' + ph,
+  ];
+  if (collapsed) parts.push('c=' + collapsed);
+  return '#' + parts.join('&');
+}
+
+function applyHash() {
+  let hash = '';
+  try { hash = window.location.hash.slice(1); } catch(e) { return; }
+  if (!hash) return;
+  const params = {};
+  hash.split('&').forEach(p => {
+    const [k, v] = p.split('=');
+    if (k && v !== undefined) params[k] = v;
+  });
+
+  if (params.f) document.getElementById('baseFreq').value = params.f;
+
+  if (params.r) {
+    const [n, d] = params.r.split(':');
+    if (n && d) {
+      document.getElementById('ratioN').value = n;
+      document.getElementById('ratioD').value = d;
+    }
+  }
+
+  if (params.t && TUNINGS[params.t]) {
+    currentTuning = params.t;
+    ['just','pyth','qcm','12tet','19tet','31tet'].forEach(k => {
+      const btn = document.getElementById('tuning-' + k);
+      if (btn) btn.style.color = k === currentTuning ? 'var(--accent)' : '';
+      if (btn) btn.style.borderColor = k === currentTuning ? 'var(--accent)' : '';
+      if (btn) btn.classList.toggle('active-tuning', k === currentTuning);
+    });
+  }
+
+  if (params.tet) {
+    const t = parseInt(params.tet);
+    if ([12,19,31].includes(t)) setTET(t);
+  }
+
+  if (params.ph) {
+    const deg = parseInt(params.ph);
+    phaseOffset = deg * Math.PI / 180;
+    document.getElementById('phaseSlider').value = deg;
+    document.getElementById('phaseVal').textContent = deg + '°';
+  }
+
+  if (params.c) {
+    const collapsed = params.c.split(',');
+    const states = {};
+    collapsed.forEach(id => { states[id] = true; });
+    try { localStorage.setItem(PANEL_STORAGE_KEY, JSON.stringify(states)); } catch(e) {}
+  }
+}
+
+function pushHash() {
+  try { history.replaceState(null, '', stateToHash()); } catch(e) {}
+}
+
+// ── Keyboard shortcuts ────────────────────────────────────────
+function activeInputFocused() {
+  const el = document.activeElement;
+  return el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA');
+}
+
+// Build flat ordered list of intervals for 1–9 shortcuts
+function getIntervalList() {
+  const tuning = TUNINGS[currentTuning];
+  const scaleMap = {};
+  tuning.scale.forEach(iv => { scaleMap[iv.name] = iv.ratio; });
+  return INTERVAL_GROUPS.map(iv => ({
+    name: iv.name,
+    ratio: iv.fixed !== undefined ? iv.fixed : scaleMap[iv.scale]
+  })).filter(iv => iv.ratio !== undefined);
+}
+
+document.addEventListener('keydown', e => {
+  if (activeInputFocused()) return;
+
+  // Space: toggle playback
+  if (e.code === 'Space') {
+    e.preventDefault();
+    if (playingBoth) stopAll();
+    else playBoth();
+    return;
+  }
+
+  // 1–9: jump to nth interval
+  const num = parseInt(e.key);
+  if (num >= 1 && num <= 9) {
+    const list = getIntervalList();
+    const iv = list[num - 1];
+    if (iv) {
+      stopAll(); stopBpm();
+      const cents = ratioToCents(iv.ratio);
+      document.getElementById('ratioSlider').value = Math.round(Math.max(0, Math.min(1200, cents)));
+      const { n, d } = approxFraction(iv.ratio, 64);
+      document.getElementById('ratioN').value = n;
+      document.getElementById('ratioD').value = d;
+      const folded = foldToOctave(iv.ratio);
+      updateDisplay(folded);
+      if (!animFrameId) drawStaticWave();
+      drawOvertones();
+      onBpmSlider();
+      pushHash();
+    }
+    return;
+  }
+
+  // Arrow keys: nudge slider ±1¢ (±10¢ with shift)
+  if (e.code === 'ArrowLeft' || e.code === 'ArrowRight') {
+    e.preventDefault();
+    const delta = (e.code === 'ArrowRight' ? 1 : -1) * (e.shiftKey ? 10 : 1);
+    const slider = document.getElementById('ratioSlider');
+    const newVal = Math.max(0, Math.min(1200, parseFloat(slider.value) + delta));
+    slider.value = newVal;
+    stopAll(); stopBpm();
+    updateFromSlider();
+    onBpmSlider();
+    pushHash();
+    return;
+  }
+
+  // P: cycle phase offset 0 / 90 / 180 / 270
+  if (e.code === 'KeyP') {
+    const current = Math.round(phaseOffset * 180 / Math.PI);
+    const next = (current + 90) % 360;
+    phaseOffset = next * Math.PI / 180;
+    document.getElementById('phaseSlider').value = next;
+    document.getElementById('phaseVal').textContent = next + '°';
+    if (!animFrameId) drawStaticWave();
+    pushHash();
+    return;
+  }
+});
+
+// Update hash whenever state changes
+document.getElementById('ratioN').addEventListener('change', pushHash);
+document.getElementById('ratioD').addEventListener('change', pushHash);
+document.getElementById('baseFreq').addEventListener('change', pushHash);
+document.getElementById('ratioSlider').addEventListener('change', pushHash);
+document.getElementById('phaseSlider').addEventListener('change', pushHash);
+
+// ── Init ──────────────────────────────────────────────────────
+applyHash();
+buildNamedRatios();
+updateFromRatio();
+onBpmSlider();
+initPanelStates();
+initTheme();
+drawStaticWave();
+drawOvertones();
+window.addEventListener('resize', () => {
+  if (!animFrameId) drawStaticWave();
+  drawOvertones();
+});
+</script>
+</body>
+</html>
