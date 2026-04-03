@@ -806,7 +806,7 @@
       </div>
       <div style="display:flex;gap:4px;margin-left:14px;align-items:center;">
         <button id="dirAscBtn" onclick="setDirection(false)" style="font-family:inherit;font-size:0.75rem;padding:3px 9px;border-radius:4px;border:1px solid var(--border);background:var(--accent);color:var(--bg);cursor:pointer;">ascending</button>
-        <button id="dirDescBtn" onclick="setDirection(true)" style="font-family:inherit;font-size:0.75rem;padding:3px 9px;border-radius:4px;border:1px solid var(--border);background:var(--bg2);color:var(--fg);cursor:pointer;">descending</button>
+        <button id="dirDescBtn" onclick="setDirection(true)" style="font-family:inherit;font-size:0.75rem;padding:3px 9px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--muted);cursor:pointer;">descending</button>
       </div>
     </div>
 
@@ -968,7 +968,7 @@
   <!-- Cents info -->
   <div class="panel">
     <div class="panel-header" onclick="togglePanel('tet')">
-      <div class="panel-label" id="tetLabel">12-TET context</div>
+      <div class="panel-label" id="tetLabel">Equal temperament context</div>
       <div class="panel-header-right">
         <div class="toggle-group" onclick="event.stopPropagation()">
         <button class="toggle-btn active" id="tetBtn12" onclick="setTET(12)">12</button>
@@ -1030,22 +1030,25 @@ let animFrameId = null;
 let analyser = null;
 let oscType = 'sine';
 let playingBoth = false;
-let seqFreq = null; // currently playing frequency during sequential playback
+let seqFreq = null;
 let beatsEnabled = false;
 let beatOscNode = null;
 let beatGainNode = null;
+let _beatRevealGains = null;
 
 const NOTE_NAMES = ['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
-const OCTAVE_NAMES = ['0','1','2','3','4','5','6','7','8'];
 
 // ── Theme ─────────────────────────────────────────────────────
 let manualThemeOverride = false;
+let _colorCache = {};
 
 function getColor(varName) {
-  return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+  if (varName in _colorCache) return _colorCache[varName];
+  return (_colorCache[varName] = getComputedStyle(document.documentElement).getPropertyValue(varName).trim());
 }
 
 function setTheme(theme) {
+  _colorCache = {};
   if (theme === 'light') {
     document.documentElement.setAttribute('data-theme', 'light');
     document.getElementById('themeToggle').textContent = '☾';
@@ -1068,7 +1071,6 @@ function toggleTheme() {
 function initTheme() {
   const saved = localStorage.getItem('ratioTheme');
   if (saved) {
-    manualThemeOverride = true;
     setTheme(saved);
   } else {
     const mq = window.matchMedia('(prefers-color-scheme: light)');
@@ -1212,15 +1214,8 @@ function startBeatTone(revealSolo) {
     beatGainNode.gain.setValueAtTime(soloGain, now + 0.6);           // hold solo
     beatGainNode.gain.linearRampToValueAtTime(bgGain, now + 1.2);    // settle to bg
 
-    // Fundamentals start silent, fade in at 0.6s (when reveal ends)
-    activeNodes.forEach(n => {
-      // activeNodes are oscillators; their gain parent needs adjustment.
-      // We stored gain nodes separately — traverse via the analyser connection.
-    });
-    // We handle fundamental gain via the revealFundamentals flag checked in makeOscillator.
-    // Instead: schedule gain on the analyser's input gain nodes stored in beatRevealGains.
-    if (window._beatRevealGains) {
-      window._beatRevealGains.forEach(g => {
+    if (_beatRevealGains) {
+      _beatRevealGains.forEach(g => {
         g.gain.setValueAtTime(0, now);
         g.gain.linearRampToValueAtTime(0.28, now + 0.6 + 0.5); // fade in at 0.6s
       });
@@ -1290,18 +1285,18 @@ function playBoth() {
     // This lets the user clearly hear the beat tone in isolation first.
     const now = ctx.currentTime;
     const revealEnd = 0.65;
-    window._beatRevealGains = [];
+    _beatRevealGains = [];
     [f1, f2].forEach(freq => {
       const g = ctx.createGain();
       g.gain.setValueAtTime(0, now);
       g.gain.linearRampToValueAtTime(0.0001, now + revealEnd);      // silent during reveal
       g.gain.linearRampToValueAtTime(0.28, now + revealEnd + 0.5);  // smooth fade-in
-      window._beatRevealGains.push(g);
+      _beatRevealGains.push(g);
       makeOscillator(freq, 0.28, g);
     });
     startBeatTone(true); // true = solo reveal mode
   } else {
-    window._beatRevealGains = null;
+    _beatRevealGains = null;
     makeOscillator(f1, 0.28);
     makeOscillator(f2, 0.28);
   }
@@ -1423,7 +1418,7 @@ function drawLissajous(canvas) {
     }
     c.globalAlpha = 1;
     // Label so the user knows why it's open
-    c.font = `${Math.round(9)}px 'DM Mono', monospace`;
+    c.font = "9px 'DM Mono', monospace";
     c.fillStyle = getColor('--muted');
     c.textAlign = 'left';
     c.fillText('irrational — open curve', 8, H - 8);
@@ -1491,9 +1486,9 @@ function drawWaveform(canvas, buf) {
 }
 
 function startWaveLoop() {
+  const buf = new Float32Array(analyser.fftSize);
   function draw() {
     animFrameId = requestAnimationFrame(draw);
-    const buf = new Float32Array(analyser.fftSize);
     analyser.getFloatTimeDomainData(buf);
     if (!isCollapsed('viz')) {
       const lc = document.getElementById('lissCanvas');
@@ -1527,8 +1522,10 @@ function drawOvertones() {
 
   const fMin = f1 * 0.85;
   const fMax = f1 * (PARTIALS + 1);
+  const log2FMin = Math.log2(fMin);
+  const log2Range = Math.log2(fMax) - log2FMin;
   function fToX(f) {
-    return ((Math.log2(f) - Math.log2(fMin)) / (Math.log2(fMax) - Math.log2(fMin))) * W;
+    return ((Math.log2(f) - log2FMin) / log2Range) * W;
   }
 
   const row1Y = H * 0.28;
@@ -1596,9 +1593,7 @@ function drawOvertones() {
     if (x < 10 || x > W - 10) return;
     const isDom = (dominant && i === dominant.i && j === dominant.j);
     const label = beatHz < 0.05 ? '~0 Hz' : beatHz.toFixed(1) + ' Hz';
-    c.font = isDom
-      ? `bold ${Math.round(8.5)}px 'DM Mono', monospace`
-      : `${Math.round(7.5)}px 'DM Mono', monospace`;
+    c.font = isDom ? "bold 9px 'DM Mono', monospace" : "8px 'DM Mono', monospace";
     c.fillStyle = beatColor(beatHz);
     c.globalAlpha = isDom ? 1.0 : 0.7;
     c.textAlign = 'center';
@@ -1647,6 +1642,10 @@ function drawStaticWave() {
 
 
 // ── Ratio logic ───────────────────────────────────────────────
+function centsToSlider(cents) {
+  return Math.round(Math.max(0, Math.min(1200, cents)));
+}
+
 function currentRatio() {
   const n = parseFloat(document.getElementById('ratioN').value) || 1;
   const d = parseFloat(document.getElementById('ratioD').value) || 1;
@@ -1682,7 +1681,7 @@ function setTET(n) {
   [12, 19, 31].forEach(d => {
     document.getElementById('tetBtn' + d).classList.toggle('active', d === n);
   });
-  document.getElementById('tetLabel').textContent = n + '-TET context';
+  document.getElementById('tetLabel').textContent = 'Equal temperament context';
   document.getElementById('cmpTETlabel').textContent = n;
   updateDisplay(currentRatio());
   if (typeof pushHash !== 'undefined') pushHash();
@@ -1752,7 +1751,7 @@ function playComparison(which) {
 }
 
 function getF1F2() {
-  const base = parseFloat(document.getElementById('baseFreq').value) || 220;
+  const base = parseFloat(document.getElementById('baseFreq').value) || 440;
   const ratio = currentRatio();
   if (baseIsF2) {
     return { f1: base / ratio, f2: base };
@@ -1764,10 +1763,10 @@ function setDirection(descending) {
   baseIsF2 = descending;
   const asc = document.getElementById('dirAscBtn');
   const desc = document.getElementById('dirDescBtn');
-  asc.style.background  = baseIsF2 ? 'var(--bg2)' : 'var(--accent)';
-  asc.style.color        = baseIsF2 ? 'var(--fg)'  : 'var(--bg)';
-  desc.style.background = baseIsF2 ? 'var(--accent)' : 'var(--bg2)';
-  desc.style.color       = baseIsF2 ? 'var(--bg)'    : 'var(--fg)';
+  asc.style.background  = baseIsF2 ? 'var(--bg)' : 'var(--accent)';
+  asc.style.color        = baseIsF2 ? 'var(--muted)' : 'var(--bg)';
+  desc.style.background = baseIsF2 ? 'var(--accent)' : 'var(--bg)';
+  desc.style.color       = baseIsF2 ? 'var(--bg)'    : 'var(--muted)';
   document.getElementById('baseNoteLabel').textContent = baseIsF2 ? 'Base note (f₂)' : 'Base note (f₁)';
   document.getElementById('ratioSlider').style.transform = baseIsF2 ? 'scaleX(-1)' : '';
   document.getElementById('tickLeft').textContent = baseIsF2 ? '2∶1' : '1∶1';
@@ -1815,7 +1814,7 @@ function updateDisplay(ratio) {
     fill.style.left = (50 + pctNorm) + '%';
     fill.style.width = (-pctNorm) + '%';
   }
-  fill.style.background = '#c8f060';
+  fill.style.background = getColor('--accent');
 
   document.getElementById('centsBarLabel').textContent =
     `Deviation from nearest ${tetDivisions}-TET step`;
@@ -1832,13 +1831,10 @@ function foldToOctave(ratio) {
   return r;
 }
 
-function updateFromRatio() {
-  const ratio = currentRatio();
+// Folds ratio to [1,2), updates the octave-fold notice, calls updateDisplay. Returns folded.
+function applyRatio(ratio) {
   const folded = foldToOctave(ratio);
   const outOfRange = Math.abs(ratio - folded) > 1e-9;
-  const cents = ratioToCents(folded);
-  document.getElementById('ratioSlider').value = Math.round(Math.max(0, Math.min(1200, cents)));
-
   const notice = document.getElementById('octaveFoldNotice');
   if (outOfRange) {
     const { n, d } = approxFraction(folded, 64);
@@ -1847,8 +1843,14 @@ function updateFromRatio() {
   } else {
     notice.style.display = 'none';
   }
-
   updateDisplay(folded);
+  return folded;
+}
+
+function updateFromRatio() {
+  const ratio = currentRatio();
+  const folded = applyRatio(ratio);
+  document.getElementById('ratioSlider').value = centsToSlider(ratioToCents(folded));
 }
 
 function updateFromSlider() {
@@ -1985,8 +1987,7 @@ function ratioDesc(r) {
   return Math.round(1200 * Math.log2(r)) + '¢';
 }
 
-function setTuning(key) {
-  currentTuning = key;
+function syncTuningButtons(key) {
   ['just','pyth','qcm','12tet','19tet','31tet'].forEach(k => {
     const btn = document.getElementById('tuning-' + k);
     if (btn) {
@@ -1995,6 +1996,11 @@ function setTuning(key) {
       btn.style.borderColor = k === key ? 'var(--accent)' : '';
     }
   });
+}
+
+function setTuning(key) {
+  currentTuning = key;
+  syncTuningButtons(key);
   buildNamedRatios();
   if (typeof pushHash !== 'undefined') pushHash();
 }
@@ -2006,28 +2012,14 @@ function buildRatioBtn(name, ratio, container) {
   btn.innerHTML = `<span class="btn-name">${name}</span>${ratioDesc(ratio)}`;
   btn.onclick = () => {
     stopAll();
-    // Set slider to exact cents position
-    const cents = ratioToCents(ratio);
-    document.getElementById('ratioSlider').value = Math.round(Math.max(0, Math.min(1200, cents)));
     // Set integer inputs to best simple approximation (max denom 64 keeps inputs sane)
     const { n, d } = approxFraction(ratio, 64);
     document.getElementById('ratioN').value = n;
     document.getElementById('ratioD').value = d;
-    // Call updateDisplay with the exact ratio directly — bypasses currentRatio()
-    // so irrational tunings (QCM, 12-TET) keep their precise values
-    const folded = foldToOctave(ratio);
-    const outOfRange = Math.abs(ratio - folded) > 1e-9;
-    const notice = document.getElementById('octaveFoldNotice');
-    if (outOfRange) {
-      const { n: fn, d: fd } = approxFraction(folded, 64);
-      document.getElementById('foldedRatio').textContent = fn + '∶' + fd;
-      notice.style.display = 'block';
-    } else {
-      notice.style.display = 'none';
-    }
-    updateDisplay(folded);
+    // applyRatio bypasses currentRatio() so irrational tunings (QCM, 12-TET) keep precise values
+    const folded = applyRatio(ratio);
+    document.getElementById('ratioSlider').value = centsToSlider(ratioToCents(folded));
     if (!animFrameId) drawStaticWave();
-    drawOvertones();
   };
   container.appendChild(btn);
 }
@@ -2293,12 +2285,7 @@ function applyHash() {
 
   if (params.t && TUNINGS[params.t]) {
     currentTuning = params.t;
-    ['just','pyth','qcm','12tet','19tet','31tet'].forEach(k => {
-      const btn = document.getElementById('tuning-' + k);
-      if (btn) btn.style.color = k === currentTuning ? 'var(--accent)' : '';
-      if (btn) btn.style.borderColor = k === currentTuning ? 'var(--accent)' : '';
-      if (btn) btn.classList.toggle('active-tuning', k === currentTuning);
-    });
+    syncTuningButtons(params.t);
   }
 
   if (params.tet) {
@@ -2360,15 +2347,12 @@ document.addEventListener('keydown', e => {
     const iv = list[num - 1];
     if (iv) {
       stopAll(); stopBpm();
-      const cents = ratioToCents(iv.ratio);
-      document.getElementById('ratioSlider').value = Math.round(Math.max(0, Math.min(1200, cents)));
       const { n, d } = approxFraction(iv.ratio, 64);
       document.getElementById('ratioN').value = n;
       document.getElementById('ratioD').value = d;
-      const folded = foldToOctave(iv.ratio);
-      updateDisplay(folded);
+      const folded = applyRatio(iv.ratio);
+      document.getElementById('ratioSlider').value = centsToSlider(ratioToCents(folded));
       if (!animFrameId) drawStaticWave();
-      drawOvertones();
       onBpmSlider();
       pushHash();
     }
