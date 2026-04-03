@@ -297,6 +297,15 @@
     border-color: var(--accent);
     color: var(--accent);
   }
+  .ratio-btn.active-tuning {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+  .ratio-btn.interval-locked {
+    border-color: #60c060;
+    color: #60c060;
+    box-shadow: 0 0 0 1px #60c060;
+  }
 
   .ratio-btn .btn-name {
     display: block;
@@ -874,62 +883,52 @@
         <button class="toggle-btn" id="btnRich" onclick="setOsc('rich')">Rich</button>
       </div>
     </div>
-    <div class="toggle-row">
-      <span class="toggle-label">Beat tone</span>
-      <div class="toggle-group">
-        <button class="toggle-btn active" id="btnBeatsOff" onclick="setBeats(false)">Off</button>
-        <button class="toggle-btn" id="btnBeatsOn" onclick="setBeats(true)">On</button>
-      </div>
-      <span style="font-size:0.65rem;color:var(--muted);margin-left:10px;" id="beatHzDisplay"></span>
-    </div>
+    <!-- Beat tone toggle commented out per roadmap -->
+    <span id="beatHzDisplay" style="display:none"></span>
+    <span id="btnBeatsOn"  style="display:none"></span>
+    <span id="btnBeatsOff" style="display:none"></span>
     <div class="play-row">
-      <button class="play-btn" id="btnBoth" onclick="playBoth()">▶ Together</button>
       <button class="play-btn" id="btnSeq" onclick="playSequential()">▶ In sequence</button>
+      <button class="play-btn" id="btnBoth" onclick="playBoth()">▶ Together</button>
       <button class="play-btn stop-btn" onclick="stopAll()">■ Stop</button>
     </div>
+    <div style="margin-top:20px;">
+      <div class="panel-header" style="margin-bottom:0;" onclick="togglePanel('bpm')">
+        <div class="panel-label" style="margin-bottom:0;">Rhythm → Pitch</div>
+        <button class="chevron-btn" id="chev-bpm">▾</button>
+      </div>
+      <div class="panel-body" id="body-bpm">
+      <p style="font-size:0.68rem;color:var(--muted);margin-bottom:16px;line-height:1.6;">
+        Drag to sweep from rhythmic pulse to audible tone. The ratio stays fixed — only the speed changes.
+      </p>
+      <div class="bpm-track-wrap">
+        <input type="range" id="bpmSlider" min="0" max="1000" step="1" value="1000"
+               style="width:100%;" oninput="onBpmSlider()">
+        <div class="bpm-zone-labels">
+          <span>20 BPM</span>
+          <span>↑ rhythm</span>
+          <span>~20 Hz threshold</span>
+          <span>pitch ↑</span>
+          <span id="bpmMaxLabel">f₁</span>
+        </div>
+      </div>
+      <div class="bpm-readout">
+        <div class="bpm-readout-box">
+          <div class="cb-label">f₁</div>
+          <div class="cb-val" id="bpmF1">—</div>
+        </div>
+        <div class="bpm-readout-box">
+          <div class="cb-label">f₂</div>
+          <div class="cb-val" id="bpmF2">—</div>
+        </div>
+        <div class="bpm-readout-box">
+          <div class="cb-label">Domain</div>
+          <div class="cb-val" id="bpmDomain">—</div>
+        </div>
+      </div>
+      </div><!-- /body-bpm -->
+    </div>
     </div><!-- /body-play -->
-  </div>
-
-  <!-- Rhythm to Pitch -->
-  <div class="panel" id="bpmPanel">
-    <div class="panel-header" onclick="togglePanel('bpm')">
-      <div class="panel-label">Rhythm → Pitch</div>
-      <button class="chevron-btn" id="chev-bpm">▾</button>
-    </div>
-    <div class="panel-body" id="body-bpm">
-    <p style="font-size:0.68rem;color:var(--muted);margin-bottom:16px;line-height:1.6;">
-      Drag to sweep from rhythmic pulse to audible tone. The ratio stays fixed — only the speed changes.
-    </p>
-    <div class="bpm-track-wrap">
-      <input type="range" id="bpmSlider" min="0" max="1000" step="1" value="300"
-             style="width:100%;" oninput="onBpmSlider()">
-      <div class="bpm-zone-labels">
-        <span>20 BPM</span>
-        <span>↑ rhythm</span>
-        <span>~20 Hz threshold</span>
-        <span>pitch ↑</span>
-        <span id="bpmMaxLabel">f₁</span>
-      </div>
-    </div>
-    <div class="bpm-readout">
-      <div class="bpm-readout-box">
-        <div class="cb-label">f₁</div>
-        <div class="cb-val" id="bpmF1">—</div>
-      </div>
-      <div class="bpm-readout-box">
-        <div class="cb-label">f₂</div>
-        <div class="cb-val" id="bpmF2">—</div>
-      </div>
-      <div class="bpm-readout-box">
-        <div class="cb-label">Domain</div>
-        <div class="cb-val" id="bpmDomain">—</div>
-      </div>
-    </div>
-    <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;">
-      <button class="bpm-play-btn" id="bpmPlayBtn" onclick="toggleBpmPlay()">▶ Play</button>
-      <button class="bpm-play-btn stop" onclick="stopBpm()">■ Stop</button>
-    </div>
-    </div><!-- /body-bpm -->
   </div>
 
   <!-- Waveform -->
@@ -1035,6 +1034,10 @@ let beatsEnabled = false;
 let beatOscNode = null;
 let beatGainNode = null;
 let _beatRevealGains = null;
+let _playBothRestartTimer = null;
+let lockedIntervalName = null;
+let _f1Oscs = []; // [{osc, mult}] for in-place freq updates while dragging
+let _f2Oscs = [];
 
 const NOTE_NAMES = ['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
 
@@ -1102,6 +1105,48 @@ function stopAll() {
   document.getElementById('btnBoth').classList.remove('active');
   document.getElementById('btnSeq').classList.remove('active');
   document.getElementById('beatHzDisplay').textContent = '';
+  bpmNodes.forEach(n => { try { n.stop(); } catch(e){} });
+  bpmNodes = [];
+  if (bpmScheduleTimeout) { clearTimeout(bpmScheduleTimeout); bpmScheduleTimeout = null; }
+  _f1Oscs = []; _f2Oscs = [];
+}
+
+function updateLiveFreqs() {
+  if (!playingBoth || !ctx) return;
+  const bpmVal = parseFloat(document.getElementById('bpmSlider').value);
+  const base = bpmSliderToF1(bpmVal);
+  const cents = parseFloat(document.getElementById('ratioSlider').value);
+  const ratio = centsToRatio(cents);
+  const f1 = baseIsF2 ? base / ratio : base;
+  const f2 = baseIsF2 ? base : base * ratio;
+
+  if (base < 18) {
+    // Rhythm domain — stop continuous oscillators, switch to click scheduling
+    if (_f1Oscs.length) {
+      _f1Oscs.forEach(({osc}) => { try { osc.stop(); } catch(e){} });
+      _f2Oscs.forEach(({osc}) => { try { osc.stop(); } catch(e){} });
+      _f1Oscs = []; _f2Oscs = [];
+    }
+    if (bpmScheduleTimeout) { clearTimeout(bpmScheduleTimeout); bpmScheduleTimeout = null; }
+    bpmNodes.forEach(n => { try { n.stop(); } catch(e){} });
+    bpmNodes = [];
+    scheduleClicks(f1, f2);
+  } else {
+    // Pitch domain — if coming from rhythm, stop clicks and restart oscillators
+    if (bpmNodes.length) {
+      if (bpmScheduleTimeout) { clearTimeout(bpmScheduleTimeout); bpmScheduleTimeout = null; }
+      bpmNodes.forEach(n => { try { n.stop(); } catch(e){} });
+      bpmNodes = [];
+    }
+    if (!_f1Oscs.length) {
+      makeOscillator(f1, 0.28, null, _f1Oscs);
+      makeOscillator(f2, 0.28, null, _f2Oscs);
+      return;
+    }
+    const t = ctx.currentTime + 0.02;
+    _f1Oscs.forEach(({osc, mult}) => osc.frequency.linearRampToValueAtTime(f1 * mult, t));
+    _f2Oscs.forEach(({osc, mult}) => osc.frequency.linearRampToValueAtTime(f2 * mult, t));
+  }
 }
 
 function stopBeatTone() {
@@ -1236,9 +1281,10 @@ function setOsc(type) {
   }
 }
 
-function makeOscillator(freq, gainVal, scheduledGainNode) {
+function makeOscillator(freq, gainVal, scheduledGainNode, freqGroup) {
   // scheduledGainNode: optional pre-built GainNode with already-scheduled automation.
   // Used by playBoth() beat-reveal mode so fundamentals fade in after the reveal window.
+  // freqGroup: optional array to push {osc, mult} into for live frequency updates.
   ensureCtx();
   const g = scheduledGainNode || ctx.createGain();
   if (!scheduledGainNode) {
@@ -1254,6 +1300,7 @@ function makeOscillator(freq, gainVal, scheduledGainNode) {
     osc.connect(g);
     osc.start();
     activeNodes.push(osc);
+    if (freqGroup) freqGroup.push({osc, mult: 1});
     return osc;
   } else {
     // Additive: fundamental + harmonics with falloff
@@ -1269,6 +1316,7 @@ function makeOscillator(freq, gainVal, scheduledGainNode) {
       pg.connect(scheduledGainNode ? g : analyser);
       osc.start();
       activeNodes.push(osc);
+      if (freqGroup) freqGroup.push({osc, mult: p});
     });
   }
 }
@@ -1278,7 +1326,11 @@ function playBoth() {
   playingBoth = true;
   document.getElementById('btnBoth').classList.add('active');
   ensureCtx();
-  const { f1, f2 } = getF1F2();
+  const bpmVal = parseFloat(document.getElementById('bpmSlider').value);
+  const bpmBase = bpmSliderToF1(bpmVal);
+  const _ratio = currentRatio();
+  const f1 = baseIsF2 ? bpmBase / _ratio : bpmBase;
+  const f2 = baseIsF2 ? bpmBase : bpmBase * _ratio;
 
   if (beatsEnabled) {
     // Beat reveal: fundamentals start silent and fade in after the reveal window (0.6s).
@@ -1297,8 +1349,13 @@ function playBoth() {
     startBeatTone(true); // true = solo reveal mode
   } else {
     _beatRevealGains = null;
-    makeOscillator(f1, 0.28);
-    makeOscillator(f2, 0.28);
+    _f1Oscs = []; _f2Oscs = [];
+    if (bpmBase < 18) {
+      scheduleClicks(f1, f2);
+    } else {
+      makeOscillator(f1, 0.28, null, _f1Oscs);
+      makeOscillator(f2, 0.28, null, _f2Oscs);
+    }
   }
   startWaveLoop();
 }
@@ -1343,14 +1400,18 @@ function playSequential() {
 
   seqFreq = f1; // any non-null value keeps waveform in live-buffer mode
   const [first, second] = baseIsF2 ? [f2, f1] : [f1, f2];
-  playNote(first, ctx.currentTime);
-  playNote(second, ctx.currentTime + dur + 0.08);
+  const t0 = ctx.currentTime;
+  const gap = dur + 0.08;
+  playNote(first,  t0);
+  playNote(second, t0 + gap);
+  playNote(first,  t0 + gap * 2);
+  playNote(second, t0 + gap * 2);
   startWaveLoop();
   setTimeout(() => {
     seqFreq = null;
     document.getElementById('btnSeq').classList.remove('active');
     if (!animFrameId) drawStaticWave();
-  }, (dur * 2 + 0.3) * 1000);
+  }, (dur * 3 + 0.3) * 1000);
 }
 
 // ── Waveform ──────────────────────────────────────────────────
@@ -1861,6 +1922,10 @@ function updateFromSlider() {
   document.getElementById('ratioN').value = n;
   document.getElementById('ratioD').value = d;
   updateDisplay(ratio);
+  if (lockedIntervalName) {
+    lockedIntervalName = null;
+    document.querySelectorAll('#intervalGroups .ratio-btn').forEach(b => b.classList.remove('interval-locked'));
+  }
 }
 
 function approxFraction(x, maxD) {
@@ -2002,6 +2067,23 @@ function setTuning(key) {
   currentTuning = key;
   syncTuningButtons(key);
   buildNamedRatios();
+  if (lockedIntervalName) {
+    const iv = INTERVAL_GROUPS.find(g => g.name === lockedIntervalName);
+    if (iv) {
+      const ratio = iv.fixed !== undefined
+        ? iv.fixed
+        : (TUNINGS[key].scale.find(s => s.name === iv.scale) || {}).ratio;
+      if (ratio) {
+        const { n, d } = approxFraction(ratio, 64);
+        document.getElementById('ratioN').value = n;
+        document.getElementById('ratioD').value = d;
+        const folded = applyRatio(ratio);
+        document.getElementById('ratioSlider').value = centsToSlider(ratioToCents(folded));
+        if (!animFrameId) drawStaticWave();
+        if (playingBoth) playBoth();
+      }
+    }
+  }
   if (typeof pushHash !== 'undefined') pushHash();
 }
 
@@ -2009,8 +2091,14 @@ function setTuning(key) {
 function buildRatioBtn(name, ratio, container) {
   const btn = document.createElement('button');
   btn.className = 'ratio-btn';
+  if (name === lockedIntervalName) btn.classList.add('interval-locked');
   btn.innerHTML = `<span class="btn-name">${name}</span>${ratioDesc(ratio)}`;
   btn.onclick = () => {
+    const wasBoth = playingBoth;
+    if (lockedIntervalName) {
+      lockedIntervalName = null;
+      document.querySelectorAll('#intervalGroups .ratio-btn').forEach(b => b.classList.remove('interval-locked'));
+    }
     stopAll();
     // Set integer inputs to best simple approximation (max denom 64 keeps inputs sane)
     const { n, d } = approxFraction(ratio, 64);
@@ -2020,6 +2108,13 @@ function buildRatioBtn(name, ratio, container) {
     const folded = applyRatio(ratio);
     document.getElementById('ratioSlider').value = centsToSlider(ratioToCents(folded));
     if (!animFrameId) drawStaticWave();
+    if (wasBoth) playBoth();
+  };
+  btn.ondblclick = (e) => {
+    e.preventDefault();
+    document.querySelectorAll('#intervalGroups .ratio-btn').forEach(b => b.classList.remove('interval-locked'));
+    lockedIntervalName = name;
+    btn.classList.add('interval-locked');
   };
   container.appendChild(btn);
 }
@@ -2077,7 +2172,8 @@ function onBpmSlider() {
   const maxF = parseFloat(document.getElementById('baseFreq').value) || 440;
   const maxEl = document.getElementById('bpmMaxLabel');
   if (maxEl) maxEl.textContent = maxF + ' Hz';
-  if (bpmPlaying) restartBpmPlay();
+  if (playingBoth) { updateLiveFreqs(); }
+  else if (bpmPlaying) restartBpmPlay();
 }
 
 function stopBpm() {
@@ -2086,15 +2182,11 @@ function stopBpm() {
   bpmNodes = [];
   if (bpmClickTimeout) { clearTimeout(bpmClickTimeout); bpmClickTimeout = null; }
   if (bpmScheduleTimeout) { clearTimeout(bpmScheduleTimeout); bpmScheduleTimeout = null; }
-  document.getElementById('bpmPlayBtn').classList.remove('active');
-  document.getElementById('bpmPlayBtn').textContent = '▶ Play';
 }
 
 function toggleBpmPlay() {
   if (bpmPlaying) { stopBpm(); return; }
   bpmPlaying = true;
-  document.getElementById('bpmPlayBtn').classList.add('active');
-  document.getElementById('bpmPlayBtn').textContent = '■ Stop';
   ensureCtx();
   onBpmSlider(); // update display
   restartBpmPlay();
@@ -2132,7 +2224,7 @@ function restartBpmPlay() {
 }
 
 function scheduleClicks(f1, f2) {
-  if (!bpmPlaying) return;
+  if (!bpmPlaying && !playingBoth) return;
   // Use Web Audio scheduling for tight timing
   // Schedule a short burst of clicks ahead of time
   const now = ctx.currentTime;
@@ -2164,7 +2256,7 @@ function scheduleClicks(f1, f2) {
 
   // Re-schedule before the buffer runs out
   bpmScheduleTimeout = setTimeout(() => {
-    if (!bpmPlaying) return;
+    if (!bpmPlaying && !playingBoth) return;
     // Check if still in rhythm domain
     const v = parseFloat(document.getElementById('bpmSlider').value);
     const newF1 = bpmSliderToF1(v);
@@ -2228,9 +2320,16 @@ function initPanelStates() {
 }
 
 // ── Event listeners ───────────────────────────────────────────
-document.getElementById('ratioN').addEventListener('input', () => { stopAll(); stopBpm(); updateFromRatio(); onBpmSlider(); });
-document.getElementById('ratioD').addEventListener('input', () => { stopAll(); updateFromRatio(); });
-document.getElementById('ratioSlider').addEventListener('input', () => { stopAll(); stopBpm(); updateFromSlider(); onBpmSlider(); });
+document.getElementById('ratioN').addEventListener('input', () => { const wb = playingBoth; stopAll(); stopBpm(); updateFromRatio(); onBpmSlider(); if (wb) playBoth(); });
+document.getElementById('ratioD').addEventListener('input', () => { const wb = playingBoth; stopAll(); updateFromRatio(); if (wb) playBoth(); });
+document.getElementById('ratioSlider').addEventListener('input', () => {
+  if (playingBoth) {
+    updateFromSlider();
+    updateLiveFreqs();
+  } else {
+    stopAll(); stopBpm(); updateFromSlider(); onBpmSlider();
+  }
+});
 document.getElementById('baseFreq').addEventListener('input', () => {
   updateDisplay(currentRatio());
   const f = parseFloat(document.getElementById('baseFreq').value) || 440;
