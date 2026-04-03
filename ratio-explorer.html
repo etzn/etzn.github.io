@@ -777,7 +777,7 @@
   <!-- Base frequency -->
   <div class="panel">
     <div class="panel-header" onclick="togglePanel('base')">
-      <div class="panel-label">Base note (f₁)</div>
+      <div class="panel-label" id="baseNoteLabel">Base note (f₁)</div>
       <button class="chevron-btn" id="chev-base">▾</button>
     </div>
     <div class="panel-body" id="body-base">
@@ -804,19 +804,23 @@
         <span class="ratio-sep">∶</span>
         <input type="number" id="ratioD" value="2" min="1" max="64" step="1">
       </div>
+      <div style="display:flex;gap:4px;margin-left:14px;align-items:center;">
+        <button id="dirAscBtn" onclick="setDirection(false)" style="font-family:inherit;font-size:0.75rem;padding:3px 9px;border-radius:4px;border:1px solid var(--border);background:var(--accent);color:var(--bg);cursor:pointer;">ascending</button>
+        <button id="dirDescBtn" onclick="setDirection(true)" style="font-family:inherit;font-size:0.75rem;padding:3px 9px;border-radius:4px;border:1px solid var(--border);background:var(--bg2);color:var(--fg);cursor:pointer;">descending</button>
+      </div>
     </div>
 
     <div class="slider-section" style="margin-top:14px;">
       <input type="range" id="ratioSlider" min="0" max="1200" step="1" value="702">
       <div class="slider-ticks">
-        <span>1∶1</span>
-        <span>2∶1</span>
+        <span id="tickLeft">1∶1</span>
+        <span id="tickRight">2∶1</span>
       </div>
     </div>
 
     <div class="ratio-row" style="margin-top:12px;">
       <div class="ratio-result">
-        f₂ = <span class="freq-val" id="f2display">660.00</span> Hz
+        <span id="derivedLabel">f₂</span> = <span class="freq-val" id="f2display">660.00</span> Hz
         &nbsp;·&nbsp; <span id="ratioDecimal">1.5000</span>×
         &nbsp;·&nbsp; <span id="centsInline">702</span>¢
       </div>
@@ -1020,6 +1024,7 @@
 <script>
 // ── Audio context ─────────────────────────────────────────────
 let ctx = null;
+let baseIsF2 = false;
 let activeNodes = [];
 let animFrameId = null;
 let analyser = null;
@@ -1278,8 +1283,7 @@ function playBoth() {
   playingBoth = true;
   document.getElementById('btnBoth').classList.add('active');
   ensureCtx();
-  const f1 = parseFloat(document.getElementById('baseFreq').value) || 440;
-  const f2 = f1 * currentRatio();
+  const { f1, f2 } = getF1F2();
 
   if (beatsEnabled) {
     // Beat reveal: fundamentals start silent and fade in after the reveal window (0.6s).
@@ -1308,8 +1312,7 @@ function playSequential() {
   stopAll();
   document.getElementById('btnSeq').classList.add('active');
   ensureCtx();
-  const f1 = parseFloat(document.getElementById('baseFreq').value) || 220;
-  const f2 = f1 * currentRatio();
+  const { f1, f2 } = getF1F2();
   const dur = 0.9;
 
   function playNote(freq, when) {
@@ -1344,8 +1347,9 @@ function playSequential() {
   }
 
   seqFreq = f1; // any non-null value keeps waveform in live-buffer mode
-  playNote(f1, ctx.currentTime);
-  playNote(f2, ctx.currentTime + dur + 0.08);
+  const [first, second] = baseIsF2 ? [f2, f1] : [f1, f2];
+  playNote(first, ctx.currentTime);
+  playNote(second, ctx.currentTime + dur + 0.08);
   startWaveLoop();
   setTimeout(() => {
     seqFreq = null;
@@ -1515,12 +1519,9 @@ function drawOvertones() {
   c.fillStyle = getColor('--bg');
   c.fillRect(0, 0, W, H);
 
-  const f1 = parseFloat(document.getElementById('baseFreq').value) || 440;
   // Use the raw decimal ratio for beat computation, not the integer approximation.
   // approxFraction would zero out all beats by construction.
-  const cents = parseFloat(document.getElementById('ratioSlider').value) || 0;
-  const ratio = Math.pow(2, cents / 1200);
-  const f2 = f1 * ratio;
+  const { f1, f2 } = getF1F2();
   const PARTIALS = 16;
   const THRESH = 6; // cents for coincidence
 
@@ -1573,8 +1574,11 @@ function drawOvertones() {
     });
   }
 
-  drawPartials(f1parts, f2parts, row1Y, getColor('--accent'));
-  drawPartials(f2parts, f1parts, row2Y, getColor('--accent3'));
+  const [topParts, botParts] = baseIsF2 ? [f2parts, f1parts] : [f1parts, f2parts];
+  const [topColor, botColor] = baseIsF2 ? [getColor('--accent3'), getColor('--accent')] : [getColor('--accent'), getColor('--accent3')];
+  const [topLabel, botLabel] = baseIsF2 ? ['f₂', 'f₁'] : ['f₁', 'f₂'];
+  drawPartials(topParts, botParts, row1Y, topColor);
+  drawPartials(botParts, topParts, row2Y, botColor);
   c.globalAlpha = 1;
 
   // ── Beat frequency labels between the rows ────────────────────
@@ -1617,8 +1621,8 @@ function drawOvertones() {
   // ── Row labels ────────────────────────────────────────────────
   c.font = `9px 'DM Mono', monospace`;
   c.fillStyle = getColor('--muted');
-  c.fillText('f₁', 3, row1Y + 3);
-  c.fillText('f₂', 3, row2Y + 3);
+  c.fillText(topLabel, 3, row1Y + 3);
+  c.fillText(botLabel, 3, row2Y + 3);
 
   // ── Dominant beat summary ─────────────────────────────────────
   c.font = `8px 'DM Mono', monospace`;
@@ -1747,12 +1751,37 @@ function playComparison(which) {
   }, totalDur * 1000 + 200);
 }
 
+function getF1F2() {
+  const base = parseFloat(document.getElementById('baseFreq').value) || 220;
+  const ratio = currentRatio();
+  if (baseIsF2) {
+    return { f1: base / ratio, f2: base };
+  }
+  return { f1: base, f2: base * ratio };
+}
+
+function setDirection(descending) {
+  baseIsF2 = descending;
+  const asc = document.getElementById('dirAscBtn');
+  const desc = document.getElementById('dirDescBtn');
+  asc.style.background  = baseIsF2 ? 'var(--bg2)' : 'var(--accent)';
+  asc.style.color        = baseIsF2 ? 'var(--fg)'  : 'var(--bg)';
+  desc.style.background = baseIsF2 ? 'var(--accent)' : 'var(--bg2)';
+  desc.style.color       = baseIsF2 ? 'var(--bg)'    : 'var(--fg)';
+  document.getElementById('baseNoteLabel').textContent = baseIsF2 ? 'Base note (f₂)' : 'Base note (f₁)';
+  document.getElementById('ratioSlider').style.transform = baseIsF2 ? 'scaleX(-1)' : '';
+  document.getElementById('tickLeft').textContent = baseIsF2 ? '2∶1' : '1∶1';
+  document.getElementById('tickRight').textContent = baseIsF2 ? '1∶1' : '2∶1';
+  document.getElementById('derivedLabel').textContent = baseIsF2 ? 'f₁' : 'f₂';
+  updateDisplay(currentRatio());
+}
+
 function updateDisplay(ratio) {
-  const f1 = parseFloat(document.getElementById('baseFreq').value) || 220;
-  const f2 = f1 * ratio;
-  document.getElementById('f2display').textContent = f2.toFixed(2);
+  const { f1, f2 } = getF1F2();
+  const base = parseFloat(document.getElementById('baseFreq').value) || 220;
+  document.getElementById('f2display').textContent = (baseIsF2 ? f1 : f2).toFixed(2);
   document.getElementById('ratioDecimal').textContent = ratio.toFixed(4);
-  document.getElementById('baseNote').textContent = freqToNoteName(f1);
+  document.getElementById('baseNote').textContent = freqToNoteName(base);
 
   const cents = ratioToCents(ratio);
   document.getElementById('centsInline').textContent = Math.round(cents);
