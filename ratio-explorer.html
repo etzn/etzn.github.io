@@ -301,12 +301,6 @@
     color: var(--accent);
     border-color: var(--accent);
   }
-  .ratio-btn.interval-locked {
-    border-color: #60c060;
-    color: #60c060;
-    box-shadow: 0 0 0 1px #60c060;
-  }
-
   .ratio-btn .btn-name {
     display: block;
     color: var(--text);
@@ -1921,7 +1915,7 @@ function updateFromSlider() {
   updateDisplay(ratio);
   if (lockedIntervalName) {
     lockedIntervalName = null;
-    document.querySelectorAll('#intervalGroups .ratio-btn').forEach(b => b.classList.remove('interval-locked'));
+    document.querySelectorAll('#intervalGroups .ratio-btn').forEach(b => b.classList.remove('active-tuning'));
   }
 }
 
@@ -2088,14 +2082,13 @@ function setTuning(key) {
 function buildRatioBtn(name, ratio, container) {
   const btn = document.createElement('button');
   btn.className = 'ratio-btn';
-  if (name === lockedIntervalName) btn.classList.add('interval-locked');
+  if (name === lockedIntervalName) btn.classList.add('active-tuning');
   btn.innerHTML = `<span class="btn-name">${name}</span>${ratioDesc(ratio)}`;
   btn.onclick = () => {
     const wasBoth = playingBoth;
-    if (lockedIntervalName) {
-      lockedIntervalName = null;
-      document.querySelectorAll('#intervalGroups .ratio-btn').forEach(b => b.classList.remove('interval-locked'));
-    }
+    document.querySelectorAll('#intervalGroups .ratio-btn').forEach(b => b.classList.remove('active-tuning'));
+    lockedIntervalName = name;
+    btn.classList.add('active-tuning');
     stopAll();
     // Set integer inputs to best simple approximation (max denom 64 keeps inputs sane)
     const { n, d } = approxFraction(ratio, 64);
@@ -2106,12 +2099,6 @@ function buildRatioBtn(name, ratio, container) {
     document.getElementById('ratioSlider').value = centsToSlider(ratioToCents(folded));
     if (!animFrameId) drawStaticWave();
     if (wasBoth) playBoth();
-  };
-  btn.ondblclick = (e) => {
-    e.preventDefault();
-    document.querySelectorAll('#intervalGroups .ratio-btn').forEach(b => b.classList.remove('interval-locked'));
-    lockedIntervalName = name;
-    btn.classList.add('interval-locked');
   };
   container.appendChild(btn);
 }
@@ -2290,9 +2277,9 @@ function togglePanel(id) {
   const collapsed = !body.classList.contains('collapsed');
   body.classList.toggle('collapsed', collapsed);
   if (chev) chev.classList.toggle('collapsed', collapsed);
-  // Tighten panel padding when collapsed
+  // Only apply panel-collapsed to the direct parent panel, not a grandparent
   const panel = body.closest('.panel');
-  if (panel) panel.classList.toggle('panel-collapsed', collapsed);
+  if (panel && body.parentElement === panel) panel.classList.toggle('panel-collapsed', collapsed);
   savePanelState(id, collapsed);
   if (!collapsed) {
     if (id === 'viz') { if (!animFrameId) drawStaticWave(); }
@@ -2309,7 +2296,7 @@ function initPanelStates() {
       if (body) {
         body.classList.add('collapsed');
         const panel = body.closest('.panel');
-        if (panel) panel.classList.add('panel-collapsed');
+        if (panel && body.parentElement === panel) panel.classList.add('panel-collapsed');
       }
       if (chev) chev.classList.add('collapsed');
     }
