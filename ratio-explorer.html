@@ -2289,6 +2289,7 @@ function togglePanel(id) {
 
 function initPanelStates() {
   const states = loadPanelStates();
+  delete states.intervals; // always start expanded
   ['base','ratio','intervals','play','bpm','viz','ovt','tet'].forEach(id => {
     if (states[id]) {
       const body = document.getElementById('body-' + id);
