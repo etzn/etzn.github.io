@@ -41,6 +41,7 @@
   .num:active{transform:scale(.92)}
   .num.on{background:var(--gold);color:var(--ink);border-color:var(--gold);font-weight:600}
   .num.seen{border-color:var(--red);color:var(--red)}
+  .chip.seen{border-color:var(--red);color:var(--red)}
   .row{display:flex;flex-wrap:wrap;gap:7px}
   .chip{border:1px solid var(--line);border-radius:20px;background:rgba(255,255,255,.03);color:var(--cream);padding:8px 13px;font-size:13px;cursor:pointer;transition:all .12s}
   .chip:active{transform:scale(.94)}
@@ -98,6 +99,8 @@
       <div class="lbl">Cards already gone</div>
       <div class="grid" id="seen"></div>
       <div class="hint">Tap numbers you can see on other players's tables or in the discard.</div>
+      <div class="lbl" style="margin-top:14px">Modifiers gone</div>
+      <div class="row" id="seenMods"></div>
       <button class="actionbtn reshuffle" onclick="resetDeck()" style="margin-top:14px">reshuffle deck back into play</button>
     </div>
   </div>
@@ -107,7 +110,7 @@
 const NUMS=[0,1,2,3,4,5,6,7,8,9,10,11,12];
 // fresh deck: count of each number = its value, except one 0
 const FRESH={}; NUMS.forEach(n=>FRESH[n]= n===0?1:n);
-const MOD_VALS=[2,4,6,8,8,10];          // flat-bonus modifier cards in a fresh deck
+const MOD_VALS=[2,4,6,8,10];            // flat-bonus modifier cards in a fresh deck
 const FRESH_X2=1;                        // one x2 card
 const FRESH_ACTION=9;                    // ~9 action cards (Freeze/FlipThree/2ndChance)
 const SC_SHARE=3/9;                      // approx fraction of actions that are Second Chance
@@ -117,13 +120,16 @@ let seen={};               // number -> extra copies known gone (beyond your own
 let mods=[];               // chosen flat modifier values you hold
 let hasX2=false;
 let hasSC=false;
+let seenMods={};           // flat modifier value -> true if seen gone (1 copy each)
+let seenX2=false;
 
 // ---------- UI build ----------
 const heldEl=document.getElementById('held');
 const seenEl=document.getElementById('seen');
 NUMS.forEach(n=>{
   const b=document.createElement('button');b.className='num';
-  b.innerHTML=n+'<small id="rem'+n+'">×'+FRESH[n]+'</small>';
+  // b.innerHTML=n+'<small id="rem'+n+'">×'+FRESH[n]+'</small>';
+  b.textContent=n;
   b.onclick=()=>{held.has(n)?held.delete(n):held.add(n);run()};
   b.dataset.n=n; heldEl.appendChild(b);
 
@@ -143,23 +149,40 @@ x2.onclick=()=>{hasX2=!hasX2;run()};modsEl.appendChild(x2);
 const scb=document.createElement('button');scb.className='chip';scb.textContent='Second Chance';scb.id='scchip';
 scb.onclick=()=>{hasSC=!hasSC;run()};modsEl.appendChild(scb);
 
-function reset(){held.clear();seen={};mods=[];hasX2=false;hasSC=false;run();}
+const seenModsEl=document.getElementById('seenMods');
+[2,4,6,8,10].forEach(v=>{
+  const c=document.createElement('button');c.className='chip';c.textContent='+'+v;
+  c.onclick=()=>{ seenMods[v]=!seenMods[v]; if(!seenMods[v])delete seenMods[v]; run(); };
+  c.id='sm'+v; seenModsEl.appendChild(c);
+});
+const smx2=document.createElement('button');smx2.className='chip';smx2.textContent='×2';smx2.id='smx2';
+smx2.onclick=()=>{seenX2=!seenX2;run()};seenModsEl.appendChild(smx2);
+
+function reset(){held.clear();seen={};mods=[];hasX2=false;hasSC=false;seenMods={};seenX2=false;run();}
 function bankHand(){
-  // move each held number into seen (increment seen count, capped at deck max)
   held.forEach(n=>{ seen[n]=(seen[n]||0)+1; });
+  mods.forEach(v=>{ seenMods[v]=true; });
+  if(hasX2) seenX2=true;
   held.clear(); mods=[]; hasX2=false; hasSC=false; run();
 }
-function resetDeck(){ seen={}; run(); }
+function resetDeck(){ seen={}; seenMods={}; seenX2=false; run(); }
 
 function paint(){
   document.querySelectorAll('#held .num').forEach(b=>{const n=+b.dataset.n;b.classList.toggle('on',held.has(n));
-    const rem=Math.max(0,FRESH[n]-(seen[n]||0));
-    const el=document.getElementById('rem'+n);if(el)el.textContent='×'+rem;});
+    // const rem=Math.max(0,FRESH[n]-(seen[n]||0));
+    // const el=document.getElementById('rem'+n);if(el)el.textContent='×'+rem;
+  });
   document.querySelectorAll('#seen .num').forEach(b=>{const n=+b.dataset.n;const c=seen[n]||0;
     b.querySelector('small').textContent=c;b.classList.toggle('seen',c>0);});
   document.querySelectorAll('#mods .chip').forEach(c=>{if(c.id==='x2chip')return;c.classList.toggle('on',mods.includes(+c.dataset.v));});
   document.getElementById('x2chip').classList.toggle('on',hasX2);
   document.getElementById('scchip').classList.toggle('on',hasSC);
+  [2,4,6,8,10].forEach(v=>{
+    const el=document.getElementById('sm'+v);
+    if(el) el.classList.toggle('seen',!!seenMods[v]);
+  });
+  const smx2el=document.getElementById('smx2');
+  if(smx2el) smx2el.classList.toggle('seen',seenX2);
 }
 
 // ---------- scoring ----------
@@ -177,7 +200,8 @@ function buildDeck(){
   // remaining flat modifiers
   let flat=MOD_VALS.slice();
   mods.forEach(v=>{const i=flat.indexOf(v); if(i>=0)flat.splice(i,1);});
-  let x2left = hasX2?0:FRESH_X2;
+  Object.keys(seenMods).forEach(v=>{const i=flat.indexOf(+v);if(i>=0)flat.splice(i,1);});
+  let x2left = (hasX2||seenX2)?0:FRESH_X2;
   let actions = FRESH_ACTION - (hasSC?1:0);   // your held SC is out of deck
   return {r, flat, x2left, actions};
 }
