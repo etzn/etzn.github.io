@@ -113,8 +113,6 @@ const FRESH={}; NUMS.forEach(n=>FRESH[n]= n===0?1:n);
 const MOD_VALS=[2,4,6,8,10];            // flat-bonus modifier cards in a fresh deck
 const FRESH_X2=1;                        // one x2 card
 const FRESH_ACTION=9;                    // ~9 action cards (Freeze/FlipThree/2ndChance)
-const SC_SHARE=3/9;                      // approx fraction of actions that are Second Chance
-
 let held=new Set();        // distinct numbers you hold
 let seen={};               // number -> extra copies known gone (beyond your own)
 let mods=[];               // chosen flat modifier values you hold
@@ -122,6 +120,7 @@ let hasX2=false;
 let hasSC=false;
 let seenMods={};           // flat modifier value -> true if seen gone (1 copy each)
 let seenX2=false;
+let seenSC=0;              // SC cards known gone (other tables / discard), 0–3
 
 // ---------- UI build ----------
 const heldEl=document.getElementById('held');
@@ -157,15 +156,19 @@ const seenModsEl=document.getElementById('seenMods');
 });
 const smx2=document.createElement('button');smx2.className='chip';smx2.textContent='×2';smx2.id='smx2';
 smx2.onclick=()=>{seenX2=!seenX2;run()};seenModsEl.appendChild(smx2);
+const smsc=document.createElement('button');smsc.className='chip';smsc.textContent='2nd Chance';smsc.id='smsc';
+smsc.onclick=()=>{ const max=3-(hasSC?1:0); seenSC=(seenSC+1)>max?0:seenSC+1; run(); };
+seenModsEl.appendChild(smsc);
 
-function reset(){held.clear();seen={};mods=[];hasX2=false;hasSC=false;seenMods={};seenX2=false;run();}
+function reset(){held.clear();seen={};mods=[];hasX2=false;hasSC=false;seenMods={};seenX2=false;seenSC=0;run();}
 function bankHand(){
   held.forEach(n=>{ seen[n]=(seen[n]||0)+1; });
   mods.forEach(v=>{ seenMods[v]=true; });
   if(hasX2) seenX2=true;
+  if(hasSC) seenSC=Math.min(3,seenSC+1);
   held.clear(); mods=[]; hasX2=false; hasSC=false; run();
 }
-function resetDeck(){ seen={}; seenMods={}; seenX2=false; run(); }
+function resetDeck(){ seen={}; seenMods={}; seenX2=false; seenSC=0; run(); }
 
 function paint(){
   document.querySelectorAll('#held .num').forEach(b=>{const n=+b.dataset.n;b.classList.toggle('on',held.has(n));
@@ -183,6 +186,11 @@ function paint(){
   });
   const smx2el=document.getElementById('smx2');
   if(smx2el) smx2el.classList.toggle('seen',seenX2);
+  const smscEl=document.getElementById('smsc');
+  if(smscEl){
+    smscEl.textContent=seenSC>0?`2nd Chance ×${seenSC}`:'2nd Chance';
+    smscEl.classList.toggle('seen',seenSC>0);
+  }
 }
 
 // ---------- scoring ----------
@@ -202,8 +210,9 @@ function buildDeck(){
   mods.forEach(v=>{const i=flat.indexOf(v); if(i>=0)flat.splice(i,1);});
   Object.keys(seenMods).forEach(v=>{const i=flat.indexOf(+v);if(i>=0)flat.splice(i,1);});
   let x2left = (hasX2||seenX2)?0:FRESH_X2;
-  let actions = FRESH_ACTION - (hasSC?1:0);   // your held SC is out of deck
-  return {r, flat, x2left, actions};
+  let scLeft = Math.max(0, 3 - (hasSC?1:0) - seenSC);
+  let actions = Math.max(0, FRESH_ACTION - (hasSC?1:0) - seenSC);
+  return {r, flat, x2left, actions, scLeft};
 }
 
 // draw one card from a deck-state (mutates copy passed in)
@@ -214,7 +223,9 @@ function drawCard(d){
   for(const n of NUMS){ if(k<d.r[n]){d.r[n]--; return {type:'num',n};} k-=d.r[n]; }
   if(k<d.flat.length){const v=d.flat.pop(); return {type:'flat',v};} k-=d.flat.length;
   if(k<d.x2left){d.x2left--; return {type:'x2'}} k-=d.x2left;
-  d.actions--; return {type:'action'};
+  const wasActions=d.actions; d.actions--;
+  if(d.scLeft>0 && Math.random()<d.scLeft/wasActions){d.scLeft--;return {type:'sc'};}
+  return {type:'action'};
 }
 
 // myopic one-ply policy used inside rollouts: should I hit again?
@@ -262,7 +273,8 @@ function rollout(twistStart){
       else { set.add(c.n); if(set.size>=7) return score(set,x2,flat,true); }
     } else if(c.type==='flat'){ flat+=c.v; }
     else if(c.type==='x2'){ x2=true; }
-    else { /*action*/ if(Math.random()<SC_SHARE && !sc) sc=true; }
+    else if(c.type==='sc'){ if(!sc) sc=true; }
+    // else: freeze/flip3 — targets others, no effect on player
   }
   return score(set,x2,flat,set.size>=7);
 }
