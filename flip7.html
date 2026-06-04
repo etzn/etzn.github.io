@@ -392,9 +392,23 @@ function flip3Stats(N=10000){
         else if(c.type==='x2'){x2=true;}
         else if(c.type==='sc'){if(!sc)sc=true;}
     }
-    if(busted) busts++; else evSum+=score(set,x2,flat,set.size>=7);
+    if(busted){
+      busts++;
+    } else {
+      while(set.size<7 && wantHit(set,x2,flat,sc,d)){
+        const c=drawCard(d);
+        if(c.type==='empty') break;
+        if(c.type==='num'){
+          if(set.has(c.n)){ if(sc){sc=false;}else{busted=true;break;} }
+          else{ set.add(c.n); if(set.size>=7) break; }
+        } else if(c.type==='flat'){ flat+=c.v; }
+          else if(c.type==='x2'){ x2=true; }
+          else if(c.type==='sc'){ if(!sc) sc=true; }
+      }
+      if(busted) busts++; else evSum+=score(set,x2,flat,set.size>=7);
+    }
   }
-  return {bustProb:busts/N, ev:(N-busts)>0?evSum/(N-busts):0};
+  return {bustProb:busts/N, ev:evSum/N};
 }
 
 // ---------- run ----------
