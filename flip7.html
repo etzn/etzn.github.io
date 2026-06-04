@@ -4,8 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Flip 7 Adviser</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Bricolage+Grotesque:wght@600;800&display=swap">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Bricolage+Grotesque:wght@600;800&display=swap');
   :root{
     --felt:#0d4d3a; --felt2:#0a3d2e; --line:#1c6b52;
     --gold:#e8c66a; --cream:#f2ead6; --red:#e2574c; --green:#6fd08c;
@@ -20,8 +22,7 @@
     -webkit-tap-highlight-color:transparent;
   }
   .wrap{max-width:560px;margin:0 auto}
-  .col-left{display:flex;flex-direction:column;gap:0}
-  .col-right{display:flex;flex-direction:column;gap:0}
+  .col-left,.col-right{display:flex;flex-direction:column;gap:0}
   @media(min-width:720px){
     .wrap{max-width:1080px;display:grid;grid-template-columns:1fr 1fr;column-gap:20px;align-items:start}
     h1,.sub{grid-column:1/-1}
@@ -42,7 +43,7 @@
   .num.seen{border-color:var(--red);color:var(--red)}
   .chip.seen{border-color:var(--red);color:var(--red)}
   .row{display:flex;flex-wrap:wrap;gap:7px}
-  .chip{border:1px solid var(--line);border-radius:20px;background:rgba(255,255,255,.03);color:var(--cream);padding:8px 13px;font-size:13px;cursor:pointer;transition:all .12s}
+  .chip{border:1px solid var(--line);border-radius:20px;background:rgba(255,255,255,.03);color:var(--cream);padding:8px 13px;font-size:13px;cursor:pointer;transition:background .12s,border-color .12s,color .12s,transform .12s}
   .chip:active{transform:scale(.94)}
   .chip.on{background:var(--cream);color:var(--ink);border-color:var(--cream);font-weight:500}
   .hint{font-size:10.5px;opacity:.5;margin-top:9px;line-height:1.5}
@@ -51,19 +52,28 @@
   .verdict.twist{background:rgba(111,208,140,.1);border-color:var(--green)}
   .verdict.stick{background:rgba(226,87,76,.1);border-color:var(--red)}
   .verdict.bust{background:rgba(226,87,76,.18);border-color:var(--red)}
+  .verdict.win{background:rgba(111,208,140,.15);border-color:var(--green);margin-bottom:16px}
   .vword{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:42px;letter-spacing:-1px;line-height:1}
-  .twist .vword{color:var(--green)} .stick .vword{color:var(--red)} .bust .vword{color:var(--red)}
+  .twist .vword{color:var(--green)} .stick .vword{color:var(--red)} .bust .vword{color:var(--red)} .win .vword{color:var(--green)}
   .vsub{font-size:12px;opacity:.8;margin-top:8px;line-height:1.5}
   .stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;margin-top:16px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .stats--wide{grid-template-columns:1fr auto 1fr auto 1fr}
+  .lbl+.stats{margin-top:0}
+  .stats-sep{background:var(--felt);padding:11px 6px;display:flex;align-items:center;justify-content:center;font-size:14px;opacity:.45}
   .stat{background:var(--felt);padding:11px 8px;text-align:center}
   .stat .k{font-size:9px;text-transform:uppercase;letter-spacing:.06em;opacity:.55}
   .stat .v{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:20px;margin-top:3px}
-  .bar{height:7px;border-radius:4px;background:rgba(255,255,255,.08);margin-top:14px;overflow:hidden}
+  .bar{height:7px;border-radius:4px;background:rgba(255,255,255,.08);margin-top:4px;overflow:hidden}
   .bar>div{height:100%;background:linear-gradient(90deg,var(--green),var(--gold) 55%,var(--red));transition:width .2s}
+  .bar-labels{display:flex;justify-content:space-between;font-size:9px;opacity:.5;margin-top:14px}
+  .bar-labels.tight{margin-top:10px}
+  .empty-hint{text-align:center;font-size:13px}
+  .empty-hint>.empty-text{opacity:.6;display:block;margin-bottom:0}
+  #bust-cards{justify-content:center}
+  #bust-cards .num{width:40px;border-color:var(--red);color:var(--red)}
   details{margin-top:8px;font-size:11px;opacity:.75;line-height:1.6}
   summary{cursor:pointer;color:var(--gold);font-size:11px;opacity:.9}
   details p{margin-top:8px}
-  .clearbtn{font-size:10px;color:var(--cream);opacity:.5;background:none;border:none;cursor:pointer;text-decoration:underline}
   .actionbtn{display:block;width:100%;padding:13px 16px;border-radius:10px;font-family:"DM Mono",monospace;font-size:14px;font-weight:500;cursor:pointer;transition:all .13s;letter-spacing:.01em}
   .actionbtn:active{transform:scale(.97)}
   .actionbtn.bank{background:transparent;border:2px solid var(--gold);color:var(--gold);}
@@ -72,7 +82,7 @@
   .actionbtn.reshuffle:hover{border-color:var(--cream);opacity:1;}
   .actionbtn.bust{background:transparent;border:2px solid var(--red);color:var(--red);}
   .actionbtn.bust:hover{background:rgba(226,87,76,.1);}
-  .btn-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px;margin-bottom:16px}
+  #bust-btn{margin-bottom:16px;display:none}
 </style>
 </head>
 <body>
@@ -93,24 +103,24 @@
 
     <div class="card" style="margin-top:0">
       <div class="lbl">Score</div>
-      <div style="display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden">
+      <div class="stats stats--wide">
         <div class="stat"><div class="k">Banked total</div><div class="v" id="score-banked">0</div></div>
-        <div style="background:var(--felt);padding:11px 6px;display:flex;align-items:center;justify-content:center;font-size:14px;opacity:.45">+</div>
+        <div class="stats-sep">+</div>
         <div class="stat"><div class="k">Current hand</div><div class="v" id="score-hand">0</div></div>
-        <div style="background:var(--felt);padding:11px 6px;display:flex;align-items:center;justify-content:center;font-size:14px;opacity:.45">=</div>
+        <div class="stats-sep">=</div>
         <div class="stat"><div class="k">Running total</div><div class="v" id="score-running">0</div></div>
       </div>
     </div>
     <button id="bank-btn" class="actionbtn bank" onclick="bankHand(true)" style="margin-top:4px;margin-bottom:8px">bank hand</button>
-    <button id="bust-btn" class="actionbtn bust" onclick="bankHand(false)" style="display:none;margin-bottom:16px">bust</button>
+    <button id="bust-btn" class="actionbtn bust" onclick="bankHand(false)">bust</button>
     <div id="bust-panel" class="card" style="margin-top:0;margin-bottom:16px;border:2px solid var(--red);text-align:center">
       <div style="font-family:'DM Mono',monospace;font-weight:500;font-size:14px;letter-spacing:.01em;color:var(--red);margin-bottom:6px">bust on</div>
       <div style="font-size:11px;opacity:.5;margin-bottom:10px">tap the card that caused your bust</div>
-      <div id="bust-cards" style="display:flex;flex-wrap:wrap;justify-content:center;gap:7px"></div>
+      <div id="bust-cards" class="row"></div>
     </div>
   </div>
 
-  <div id="col-right" class="col-right">
+  <div class="col-right">
     <div id="out"></div>
     <button id="counting-chip" class="chip on" onclick="toggleCounting()" style="margin-top:16px;margin-bottom:8px">card counting</button>
     <div id="cards-gone-card" class="card" style="margin-top:0">
@@ -155,11 +165,16 @@ NUMS.forEach(n=>{
 
   const s=document.createElement('button');s.className='num';
   s.innerHTML=n+'<small id="sc'+n+'">0</small>';
-  s.onclick=()=>{ const max=FRESH[n]; seen[n]=((seen[n]||0)+1)>max?0:(seen[n]||0)+1; run(); };
+  s.onclick=()=>{
+    const max=FRESH[n]-(held.has(n)?1:0);
+    const next=((seen[n]||0)+1)>max?0:(seen[n]||0)+1;
+    if(next===0) delete seen[n]; else seen[n]=next;
+    run();
+  };
   s.dataset.n=n; seenEl.appendChild(s);
 });
 const modsEl=document.getElementById('mods');
-[2,4,6,8,10].forEach(v=>{
+MOD_VALS.forEach(v=>{
   const c=document.createElement('button');c.className='chip';c.textContent='+'+v;
   c.onclick=()=>{ const i=mods.indexOf(v); i<0?mods.push(v):mods.splice(i,1); run(); };
   c.dataset.v=v; modsEl.appendChild(c);
@@ -170,7 +185,7 @@ const scb=document.createElement('button');scb.className='chip';scb.textContent=
 scb.onclick=()=>{hasSC=!hasSC;run()};modsEl.appendChild(scb);
 
 const seenModsEl=document.getElementById('seenMods');
-[2,4,6,8,10].forEach(v=>{
+MOD_VALS.forEach(v=>{
   const c=document.createElement('button');c.className='chip';c.textContent='+'+v;
   c.onclick=()=>{ seenMods[v]=!seenMods[v]; if(!seenMods[v])delete seenMods[v]; run(); };
   c.id='sm'+v; seenModsEl.appendChild(c);
@@ -181,11 +196,35 @@ const smsc=document.createElement('button');smsc.className='chip';smsc.textConte
 smsc.onclick=()=>{ const max=3-(hasSC?1:0); seenSC=(seenSC+1)>max?0:seenSC+1; run(); };
 seenModsEl.appendChild(smsc);
 
+// ---------- cached DOM refs ----------
+const DOM={
+  bankBtn:     document.getElementById('bank-btn'),
+  bustBtn:     document.getElementById('bust-btn'),
+  bustPanel:   document.getElementById('bust-panel'),
+  bustCards:   document.getElementById('bust-cards'),
+  ccChip:      document.getElementById('counting-chip'),
+  cardsGone:   document.getElementById('cards-gone-card'),
+  reshuffle:   document.getElementById('reshuffle-btn'),
+  scoreBanked: document.getElementById('score-banked'),
+  scoreHand:   document.getElementById('score-hand'),
+  scoreRun:    document.getElementById('score-running'),
+  out:         document.getElementById('out'),
+  x2chip:      document.getElementById('x2chip'),
+  scchip:      document.getElementById('scchip'),
+  sm2:         document.getElementById('sm2'),
+  sm4:         document.getElementById('sm4'),
+  sm6:         document.getElementById('sm6'),
+  sm8:         document.getElementById('sm8'),
+  sm10:        document.getElementById('sm10'),
+  smx2:        document.getElementById('smx2'),
+  smsc:        document.getElementById('smsc'),
+};
+
 function reset(){held.clear();seen={};mods=[];hasX2=false;hasSC=false;seenMods={};seenX2=false;seenSC=0;totalScore=0;run();}
 function toggleCounting(){ cardCounting=!cardCounting; run(); }
 function bankHand(addScore=false){
   if(addScore){
-    const s=score(held,hasX2,mods.reduce((a,b)=>a+b,0),held.size>=7);
+    const s=score(held,hasX2,flatSum(),held.size>=7);
     totalScore+=s;
   }
   if(cardCounting){
@@ -207,44 +246,34 @@ function paint(){
   document.querySelectorAll('#seen .num').forEach(b=>{const n=+b.dataset.n;const c=seen[n]||0;
     b.querySelector('small').textContent=c;b.classList.toggle('seen',c>0);});
   document.querySelectorAll('#mods .chip').forEach(c=>{if(c.id==='x2chip')return;c.classList.toggle('on',mods.includes(+c.dataset.v));});
-  document.getElementById('x2chip').classList.toggle('on',hasX2);
-  document.getElementById('scchip').classList.toggle('on',hasSC);
-  [2,4,6,8,10].forEach(v=>{
-    const el=document.getElementById('sm'+v);
-    if(el) el.classList.toggle('seen',!!seenMods[v]);
-  });
-  const smx2el=document.getElementById('smx2');
-  if(smx2el) smx2el.classList.toggle('seen',seenX2);
-  const smscEl=document.getElementById('smsc');
-  if(smscEl){
-    smscEl.textContent=seenSC>0?`2nd Chance ×${seenSC}`:'2nd Chance';
-    smscEl.classList.toggle('seen',seenSC>0);
-  }
-  const bankBtn=document.getElementById('bank-btn');
-  if(bankBtn){const empty=held.size===0&&mods.length===0&&!hasX2;bankBtn.style.pointerEvents=empty?'none':'';}
-  const reshuffleBtn=document.getElementById('reshuffle-btn');
-  if(reshuffleBtn){const deckClear=Object.keys(seen).every(k=>!seen[k])&&!Object.keys(seenMods).length&&!seenX2&&!seenSC;reshuffleBtn.style.pointerEvents=deckClear?'none':'';}
-  const ccChip=document.getElementById('counting-chip');
-  if(ccChip) ccChip.classList.toggle('on',cardCounting);
-  const cardsGoneCard=document.getElementById('cards-gone-card');
-  if(cardsGoneCard) cardsGoneCard.style.display=cardCounting?'':'none';
-  const bustBtnEl=document.getElementById('bust-btn');
-  if(bustBtnEl) bustBtnEl.style.display=cardCounting?'none':'block';
-  const bustPanel=document.getElementById('bust-panel');
-  if(bustPanel){bustPanel.style.display=cardCounting?'':'none';const f7=held.size>=7;bustPanel.style.opacity=f7?'0.35':'';bustPanel.style.pointerEvents=f7?'none':'';}
-  const bustEl=document.getElementById('bust-cards');
-  if(bustEl){
-    bustEl.innerHTML='';
-    if(held.size===0){
-      bustEl.innerHTML='<span style="font-size:11px;opacity:.35;padding:4px 2px">— select cards above —</span>';
-    } else {
-      [...held].sort((a,b)=>a-b).forEach(n=>{
-        const b=document.createElement('button');b.className='num';b.textContent=n;
-        b.style.cssText='width:40px;border-color:var(--red);color:var(--red)';
-        b.onclick=()=>bustWithCard(n);
-        bustEl.appendChild(b);
-      });
-    }
+  DOM.x2chip.classList.toggle('on',hasX2);
+  DOM.scchip.classList.toggle('on',hasSC);
+  MOD_VALS.forEach(v=>{ DOM['sm'+v].classList.toggle('seen',!!seenMods[v]); });
+  DOM.smx2.classList.toggle('seen',seenX2);
+  DOM.smsc.textContent=seenSC>0?`2nd Chance ×${seenSC}`:'2nd Chance';
+  DOM.smsc.classList.toggle('seen',seenSC>0);
+  const empty=held.size===0&&mods.length===0&&!hasX2;
+  DOM.bankBtn.style.pointerEvents=empty?'none':'';
+  DOM.bankBtn.style.opacity=empty?'0.4':'';
+  const deckClear=Object.keys(seen).every(k=>!seen[k])&&!Object.keys(seenMods).length&&!seenX2&&!seenSC;
+  DOM.reshuffle.style.pointerEvents=deckClear?'none':'';
+  DOM.reshuffle.style.opacity=deckClear?'0.4':'';
+  DOM.ccChip.classList.toggle('on',cardCounting);
+  DOM.cardsGone.style.display=cardCounting?'':'none';
+  DOM.bustBtn.style.display=cardCounting?'none':'block';
+  const f7=held.size>=7;
+  DOM.bustPanel.style.display=cardCounting?'':'none';
+  DOM.bustPanel.style.opacity=f7?'0.35':'';
+  DOM.bustPanel.style.pointerEvents=f7?'none':'';
+  DOM.bustCards.innerHTML='';
+  if(held.size===0){
+    DOM.bustCards.innerHTML='<span style="font-size:11px;opacity:.35;padding:4px 2px">— select cards above —</span>';
+  } else {
+    [...held].sort((a,b)=>a-b).forEach(n=>{
+      const b=document.createElement('button');b.className='num';b.textContent=n;
+      b.onclick=()=>bustWithCard(n);
+      DOM.bustCards.appendChild(b);
+    });
   }
 }
 
@@ -253,6 +282,7 @@ function score(set, x2, flat, flip7){
   let sum=0; set.forEach(n=>sum+=n);
   return sum*(x2?2:1) + flat + (flip7?15:0);
 }
+function flatSum(){ return mods.reduce((a,b)=>a+b,0); }
 
 // build remaining deck object from current knowledge
 function buildDeck(){
@@ -276,7 +306,7 @@ function drawCard(d){
   if(total<=0) return {type:'empty'};
   let k=Math.random()*total;
   for(const n of NUMS){ if(k<d.r[n]){d.r[n]--; return {type:'num',n};} k-=d.r[n]; }
-  if(k<d.flat.length){const v=d.flat.pop(); return {type:'flat',v};} k-=d.flat.length;
+  if(k<d.flat.length){const i=Math.floor(Math.random()*d.flat.length);const v=d.flat.splice(i,1)[0];return {type:'flat',v};} k-=d.flat.length;
   if(k<d.x2left){d.x2left--; return {type:'x2'}} k-=d.x2left;
   const wasActions=d.actions; d.actions--;
   if(d.scLeft>0 && Math.random()<d.scLeft/wasActions){d.scLeft--;return {type:'sc'};}
@@ -289,7 +319,9 @@ function wantHit(set,x2,flat,sc,d){
   if(set.size>=7) return false; // already flipped 7 -> round ended
   let total=0; NUMS.forEach(n=>total+=d.r[n]); total+=d.flat.length+d.x2left+d.actions;
   if(total<=0) return false;
-  const cur=score(set,x2,flat,false);
+  let setSum=0; set.forEach(n=>setSum+=n);
+  const mult=x2?2:1;
+  const cur=setSum*mult+flat;
   let dup=0; set.forEach(n=>dup+=d.r[n]);
   let exp=0;
   // bust branch
@@ -298,14 +330,13 @@ function wantHit(set,x2,flat,sc,d){
   // safe number branch
   NUMS.forEach(n=>{ if(!set.has(n) && d.r[n]>0){
     const f7=(set.size+1)===7;
-    const v=score(new Set([...set,n]),x2,flat,f7);
-    exp += d.r[n]/total * v;
+    exp += d.r[n]/total * ((setSum+n)*mult+flat+(f7?15:0));
   }});
-  // flat modifier branch
-  if(d.flat.length){ let avg=d.flat.reduce((a,b)=>a+b,0)/d.flat.length;
-    exp += d.flat.length/total * score(set,x2,flat+avg,false); }
+  // flat modifier branch (flat cards are not doubled by x2)
+  if(d.flat.length){ const avg=d.flat.reduce((a,b)=>a+b,0)/d.flat.length;
+    exp += d.flat.length/total * (cur+avg); }
   // x2 branch
-  if(d.x2left){ exp += d.x2left/total * score(set,true,flat,false); }
+  if(d.x2left){ exp += d.x2left/total * (setSum*2+flat); }
   // action branch (modeled as no score / no bust for you; play on others or keep SC)
   if(d.actions){ exp += d.actions/total * cur; }
   return exp > cur + 1e-9;
@@ -314,7 +345,7 @@ function wantHit(set,x2,flat,sc,d){
 // one full rollout starting from a forced first twist (twistStart=true) or sticking
 function rollout(twistStart){
   let set=new Set(held);
-  let x2=hasX2, flat=mods.reduce((a,b)=>a+b,0), sc=hasSC;
+  let x2=hasX2, flat=flatSum(), sc=hasSC;
   let d=buildDeck();
   if(!twistStart) return score(set,x2,flat,set.size>=7);
   let forced=true;
@@ -348,8 +379,9 @@ function bustProb(){
 // bust probability + EV if forced to accept 3 cards (Flip Three targeting yourself)
 function flip3Stats(N=10000){
   let busts=0,evSum=0;
+  const fs=flatSum();
   for(let i=0;i<N;i++){
-    let set=new Set(held),sc=hasSC,x2=hasX2,flat=mods.reduce((a,b)=>a+b,0),d=buildDeck(),busted=false;
+    let set=new Set(held),sc=hasSC,x2=hasX2,flat=fs,d=buildDeck(),busted=false;
     for(let draw=0;draw<3;draw++){
       const c=drawCard(d);
       if(c.type==='empty') break;
@@ -362,65 +394,65 @@ function flip3Stats(N=10000){
     }
     if(busted) busts++; else evSum+=score(set,x2,flat,set.size>=7);
   }
-  return {bustProb:busts/N, ev:evSum/N};
+  return {bustProb:busts/N, ev:(N-busts)>0?evSum/(N-busts):0};
 }
-function flip3BustProb(N=10000){ return flip3Stats(N).bustProb; }
 
 // ---------- run ----------
 function run(){
   paint();
-  const handScore=score(held,hasX2,mods.reduce((a,b)=>a+b,0),held.size>=7);
-  const elBanked=document.getElementById('score-banked');
-  const elHand=document.getElementById('score-hand');
-  const elRunning=document.getElementById('score-running');
-  if(elBanked) elBanked.textContent=totalScore;
-  if(elHand) elHand.textContent=handScore;
-  if(elRunning) elRunning.textContent=totalScore+handScore;
+  const fs=flatSum();
+  const handScore=score(held,hasX2,fs,held.size>=7);
+  DOM.scoreBanked.textContent=totalScore;
+  DOM.scoreHand.textContent=handScore;
+  DOM.scoreRun.textContent=totalScore+handScore;
   const runningTotal=totalScore+handScore;
   const winBanner=runningTotal>=200
-    ?`<div style="background:rgba(111,208,140,.15);border:1px solid var(--green);border-radius:14px;padding:20px;text-align:center;margin-bottom:16px"><div class="vword" style="color:var(--green)">YOU WIN</div><div class="vsub">You've crossed 200 points! Keep playing if another player is still ahead by margin.</div></div>`
+    ?`<div class="verdict win"><div class="vword">YOU WIN</div><div class="vsub">You've crossed 200 points! Keep playing if another player is still ahead by margin.</div></div>`
     :'';
-  const out=document.getElementById('out');
   if(held.size===0 && mods.length===0 && !hasX2){
     const {bustProb:f3}=flip3Stats();
-    out.innerHTML=winBanner+'<div class="card" style="text-align:center;opacity:.6;font-size:13px">Select your hand to get advice.'
-      +'<div style="display:flex;justify-content:space-between;font-size:9px;opacity:.5;margin-top:14px"><span>flip 3 bust risk</span><span>'+Math.min(100,f3*100).toFixed(0)+'%</span></div>'
-      +'<div class="bar" style="margin-top:4px"><div style="width:'+Math.min(100,f3*100).toFixed(0)+'%"></div></div>'
-      +'</div>';return;
+    const f3p=Math.min(100,f3*100).toFixed(0);
+    DOM.out.innerHTML=winBanner+`<div class="card empty-hint"><span class="empty-text">Select your hand to get advice.</span><div class="bar-labels"><span>flip 3 bust risk</span><span>${f3p}%</span></div><div class="bar"><div style="width:${f3p}%"></div></div></div>`;
+    return;
   }
   if(held.size>=7){
-    out.innerHTML=winBanner+'<div class="verdict bust"><div class="vword">FLIP 7</div><div class="vsub">You hold 7 distinct numbers — the round ends and you bank automatically. Score: '+score(held,hasX2,mods.reduce((a,b)=>a+b,0),true)+'.</div></div>';return;
+    DOM.out.innerHTML=winBanner+`<div class="verdict bust"><div class="vword">FLIP 7</div><div class="vsub">You hold 7 distinct numbers — the round ends and you bank automatically. Score: ${score(held,hasX2,fs,true)}.</div></div>`;
+    return;
   }
   const N=50000;
-  const evStick=ev(false,1);
+  const evStick=score(held,hasX2,fs,false);
   const evTwist=ev(true,N);
   const pb=bustProb();
   const {bustProb:f3, ev:f3ev}=flip3Stats();
-  const cur=score(held,hasX2,mods.reduce((a,b)=>a+b,0),false);
   const hit=evTwist>evStick;
   const margin=Math.abs(evTwist-evStick);
   const cls=hit?'twist':'stick';
   const word=hit?'HIT':'STICK';
   let conf = margin<1.5?'razor-thin':margin<5?'slight':margin<12?'clear':'strong';
   const line = conf[0].toUpperCase()+conf.slice(1)+' edge';
-  out.innerHTML=winBanner+`
+  const pbp=(pb*100).toFixed(0);
+  const f3p=(f3*100).toFixed(0);
+  const detailsOpen=DOM.out.querySelector('details')?.open??false;
+  DOM.out.innerHTML=winBanner+`
     <div class="verdict ${cls}">
       <div class="vword">${word}</div>
       <div class="vsub">${line}</div>
       <div class="stats">
-        <div class="stat"><div class="k">Bank now</div><div class="v">${evStick}</div></div>
+        <div class="stat"><div class="k">Bank now</div><div class="v">${evStick.toFixed(1)}</div></div>
         <div class="stat"><div class="k">Hit (EV)</div><div class="v">${evTwist.toFixed(1)}</div></div>
         <div class="stat"><div class="k">Flip 3 (EV)</div><div class="v">${f3ev.toFixed(1)}</div></div>
       </div>
-      <div style="display:flex;justify-content:space-between;font-size:9px;opacity:.5;margin-top:14px"><span>next-card bust risk</span><span>${(pb*100).toFixed(0)}%</span></div>
-      <div class="bar" style="margin-top:4px"><div style="width:${Math.min(100,pb*100).toFixed(0)}%"></div></div>
-      <div style="display:flex;justify-content:space-between;font-size:9px;opacity:.5;margin-top:10px"><span>flip 3 bust risk</span><span>${(f3*100).toFixed(0)}%</span></div>
-      <div class="bar" style="margin-top:4px"><div style="width:${Math.min(100,f3*100).toFixed(0)}%"></div></div>
+      <div class="bar-labels"><span>next-card bust risk</span><span>${pbp}%</span></div>
+      <div class="bar"><div style="width:${pbp}%"></div></div>
+      <div class="bar-labels tight"><span>flip 3 bust risk</span><span>${f3p}%</span></div>
+      <div class="bar"><div style="width:${f3p}%"></div></div>
       <details><summary>how it decides &amp; what it ignores</summary>
         <p>Runs ${N.toLocaleString()} Monte-Carlo rollouts. "Hit (EV)" forces one draw now, then follows a marginal-EV policy (keep hitting while the next card's expected gain beats its expected loss) until it stops or busts — so it already prices in chaining and the +15 Flip-7 jackpot.</p>
         <p>Deck = full pyramid minus your hand minus any cards you marked gone. <b>Blind spots:</b> action cards are modeled as harmless-to-you (you'd play Freeze/Flip-Three on rivals). Real opponents holding Flip-Three can force-draw you — the tool can't see that. Treat the verdict as a strong prior, not gospel.</p>
       </details>
     </div>`;
+  const det=DOM.out.querySelector('details');
+  if(det && detailsOpen) det.open=true;
 }
 run();
 </script>
