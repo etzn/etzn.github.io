@@ -53,8 +53,8 @@
   #picker{position:absolute;z-index:50;display:none;background:#0c241b;border:1px solid #2a4a3c;border-radius:12px;padding:13px 14px;box-shadow:0 12px 34px rgba(0,0,0,.55)}
   #picker.show{display:block}
   #picker h4{margin:0 0 9px;font-size:11px;color:var(--gold);font-weight:500;text-align:center;letter-spacing:.03em}
-  #picker .pgrid{display:grid;grid-template-columns:repeat(5,32px);gap:6px}
-  #picker .pchip{height:32px;border:1px solid rgba(242,234,214,.2);border-radius:7px;background:rgba(255,255,255,.03);color:var(--cream);display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;font-family:'DM Mono',monospace}
+  #picker .pgrid{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:0 auto}
+  #picker .pchip{width:32px;height:32px;flex-shrink:0;border:1px solid rgba(242,234,214,.2);border-radius:7px;background:rgba(255,255,255,.03);color:var(--cream);display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;font-family:'DM Mono',monospace}
   #picker .pchip:hover{border-color:var(--cream)}
   #picker .pchip.cur{background:var(--gold);color:var(--ink);border-color:var(--gold);font-weight:600}
   .hint{font-size:10.5px;opacity:.5;margin-top:9px;line-height:1.5}
@@ -96,6 +96,22 @@
   .actionbtn.bust{background:transparent;border:2px solid var(--red);color:var(--red);}
   .actionbtn.bust:hover{background:rgba(226,87,76,.1);}
   #bust-btn{margin-bottom:16px;display:none}
+  @media(max-width:719px){
+    .wrap{display:flex;flex-direction:column}
+    .col-left,.col-right{display:contents}
+    h1{order:0}
+    .sub{order:1}
+    #out{order:2;margin-bottom:16px}
+    #numbers-card{order:3}
+    #mods-card{order:4}
+    #bank-btn{order:5}
+    #bust-btn{order:6}
+    #bust-panel{order:7}
+    #counting-chip{order:8}
+    #cards-gone-card{order:9}
+    #score-card{order:10;margin-top:0}
+    #new-game-btn{order:11}
+  }
 </style>
 </head>
 <body>
@@ -104,17 +120,17 @@
   <div class="sub">Tap the distinct numbers you currently hold. The engine runs ~50k simulated rollouts to compare <b>sticking now</b> vs <b>hitting</b> (then playing on optimally).</div>
 
   <div class="col-left">
-    <div class="card" style="margin-top:0">
+    <div id="numbers-card" class="card" style="margin-top:0">
       <div class="lbl">Your number cards <small>tap to select</small></div>
       <div class="grid" id="held"></div>
     </div>
 
-    <div class="card">
+    <div id="mods-card" class="card">
       <div class="lbl">Modifiers held</div>
       <div class="row" id="mods"></div>
     </div>
 
-    <div class="card" style="margin-top:0">
+    <div id="score-card" class="card" style="margin-top:0">
       <div class="lbl">Score</div>
       <div class="stats stats--wide">
         <div class="stat"><div class="k">Banked total</div><div class="v" id="score-banked">0</div></div>
@@ -144,7 +160,7 @@
       <div class="row" id="seenMods"></div>
       <button id="reshuffle-btn" class="actionbtn reshuffle" onclick="resetDeck()" style="margin-top:14px">reshuffle deck back into play</button>
     </div>
-    <button class="actionbtn bank" onclick="reset()" style="margin-top:8px;margin-bottom:16px">new game</button>
+    <button id="new-game-btn" class="actionbtn bank" onclick="reset()" style="margin-top:8px;margin-bottom:16px">new game</button>
   </div>
 </div>
 
@@ -271,10 +287,17 @@ function attachLongPress(el, openFn){
   el.addEventListener('click',e=>{ if(longFired){ e.preventDefault(); e.stopImmediatePropagation(); longFired=false; } }, true);
   el.addEventListener('contextmenu',e=>{ e.preventDefault(); cancel(); openFn(); });
 }
+function colsForCount(n){
+  if(n<=5) return n;
+  if(n===6) return 3;
+  if(n<=10) return n<=8?4:5;
+  return n<=12?4:5;
+}
 function openPicker(anchor, label, current, max, onPick){
   if(max<1) return;
   closePicker();
-  let html='<h4>'+label+'</h4><div class="pgrid">';
+  const n=max+1, cols=colsForCount(n), pgridW=cols*32+(cols-1)*6;
+  let html='<h4>'+label+'</h4><div class="pgrid" style="max-width:'+pgridW+'px">';
   for(let i=0;i<=max;i++) html+='<button class="pchip'+(i===current?' cur':'')+'" data-v="'+i+'">'+i+'</button>';
   html+='</div>';
   const p=DOM.picker;
@@ -289,7 +312,7 @@ function outsideClose(e){ if(!DOM.picker.contains(e.target)) closePicker(); }
 function positionPicker(anchor){
   const p=DOM.picker, r=anchor.getBoundingClientRect();
   const pw=p.offsetWidth, ph=p.offsetHeight;
-  let left=r.left, top=r.bottom+6;
+  let left=r.left+r.width/2-pw/2, top=r.bottom+6;
   if(left+pw>innerWidth-8) left=innerWidth-pw-8;
   if(left<8) left=8;
   if(top+ph>innerHeight-8) top=r.top-ph-6;
