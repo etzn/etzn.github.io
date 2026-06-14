@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The abacus remembers Rome — soroban · Roman · Arabic</title>
+<style>
+  :root{
+    --ink:#17120f; --ink2:#221a14; --panel:#1d160f;
+    --wood:#6b3f23; --wood-dk:#3a2113;
+    --brass:#c9a25a; --brass-dk:#8a6a30;
+    --bone:#ece2cd; --bone-dim:#9c8f76;
+    --cinnabar:#c0432c; --cinnabar-dk:#7e2a1c;
+    --ledger:#e8dfca; --ledger-ink:#241c14; --ledger-line:#cdbf9f;
+    --serif:Georgia,"Iowan Old Style","Times New Roman",serif;
+    --mono:ui-monospace,"SF Mono",Menlo,"DejaVu Sans Mono",monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:
+      radial-gradient(120% 90% at 50% -10%, #2a201700 40%, #0c0907 100%),
+      var(--ink);
+    color:var(--bone); font-family:var(--serif);
+    -webkit-font-smoothing:antialiased; line-height:1.5;
+    padding:clamp(18px,4vw,48px) 16px 64px;
+  }
+  .wrap{max-width:920px;margin:0 auto}
+
+  header{margin-bottom:clamp(18px,3vw,30px)}
+  .eyebrow{
+    font-family:var(--mono); font-size:11px; letter-spacing:.34em;
+    text-transform:uppercase; color:var(--brass); margin:0 0 12px;
+  }
+  h1{
+    font-weight:400; font-size:clamp(30px,6.2vw,56px); line-height:1.02;
+    margin:0; letter-spacing:-.01em;
+  }
+  h1 em{font-style:italic;color:var(--brass)}
+  .lede{
+    max-width:56ch; color:var(--bone-dim);
+    font-size:clamp(15px,1.7vw,17px); margin:14px 0 0;
+  }
+
+  /* ---------- instrument ---------- */
+  .instrument{
+    margin:clamp(22px,3.5vw,34px) 0 0;
+    background:linear-gradient(180deg,#241910,#190f08);
+    border:1px solid #0c0805; border-radius:14px;
+    box-shadow:0 26px 60px -30px #000, inset 0 1px 0 #ffffff10;
+    padding:clamp(14px,2.5vw,22px);
+  }
+  .frame-wrap{
+    background:
+      linear-gradient(180deg,#7a4a2a,#502d18 60%,#3a2012);
+    border-radius:12px; padding:clamp(8px,1.6vw,14px);
+    box-shadow:inset 0 2px 4px #00000060, inset 0 0 0 1px #00000050, 0 2px 0 #ffffff14;
+  }
+  svg.abacus{display:block;width:100%;height:auto;touch-action:manipulation}
+  .bead{cursor:pointer; transition:transform .26s cubic-bezier(.2,.8,.2,1)}
+  .bead .body{transition:fill .2s ease, stroke .2s ease}
+  .bead:focus{outline:none}
+  .bead:focus-visible .body{stroke:var(--brass);stroke-width:2.4}
+  .glyph{font-family:var(--serif);font-weight:700;pointer-events:none;
+    text-anchor:middle;dominant-baseline:central;
+    transition:opacity .2s ease, fill .2s ease}
+  svg.abacus text{font-family:var(--serif)}
+  svg.abacus text.lab{font-family:var(--mono);letter-spacing:.5px}
+  .ovr{pointer-events:none;transition:stroke .2s ease}
+  @media (prefers-reduced-motion:reduce){.bead{transition:none}}
+
+  /* ---------- inline inputs ---------- */
+  .inrow{display:flex;gap:16px;margin-top:12px;flex-wrap:wrap;align-items:flex-start}
+  .inpair{flex:1 1 160px;min-width:0}
+  .inlabel{font-family:var(--mono);font-size:10px;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--brass);display:block;margin-bottom:3px}
+  input.infield{width:100%;border:none;background:transparent;color:var(--bone);
+    border-bottom:1px solid #46341f;padding:4px 2px 6px;outline:none}
+  input.infield:focus{border-bottom-color:var(--brass)}
+  #arabic{font-family:var(--mono);font-size:clamp(17px,2.6vw,22px);letter-spacing:.02em}
+  #roman{font-family:var(--serif);font-size:clamp(15px,2.4vw,20px);letter-spacing:.04em}
+  #roman.bad{border-bottom-color:var(--cinnabar);color:var(--cinnabar)}
+  .hint{font-family:var(--mono);font-size:10px;color:#5a4a30;margin:3px 0 0;line-height:1.5}
+  .err{color:var(--cinnabar)}
+
+  /* ---------- controls ---------- */
+  .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:18px}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-right:auto}
+  .chip,.btn,.toggle{font-family:var(--mono);font-size:12px;letter-spacing:.04em;
+    border-radius:999px;cursor:pointer;border:1px solid var(--ledger-line);
+    background:#ffffff55;color:#4a3a26;padding:7px 13px;transition:all .15s}
+  .chip:hover,.btn:hover{border-color:var(--cinnabar);color:var(--cinnabar)}
+  .chip:focus-visible,.btn:focus-visible,.toggle:focus-visible{outline:2px solid var(--cinnabar);outline-offset:2px}
+  .toggle[aria-pressed="true"]{background:var(--cinnabar);color:var(--bone);border-color:var(--cinnabar-dk)}
+
+  /* ---------- anzan drill ---------- */
+  .anzan{margin-top:clamp(16px,2.5vw,22px);
+    background:linear-gradient(180deg,#241910,#150c06);
+    border:1px solid #0c0805;border-radius:14px;
+    box-shadow:0 26px 60px -34px #000, inset 0 1px 0 #ffffff10;
+    padding:clamp(16px,2.6vw,26px)}
+  .anzan .eyebrow{margin-bottom:14px}
+  .flashzone{
+    height:clamp(150px,28vw,210px);display:flex;flex-direction:column;
+    align-items:center;justify-content:center;text-align:center;
+    background:radial-gradient(80% 120% at 50% 40%,#2c1f12,#120a05);
+    border:1px solid #0c0805;border-radius:10px;
+    box-shadow:inset 0 2px 18px #00000080;overflow:hidden}
+  .flashnum{font-family:var(--serif);line-height:1;color:var(--bone);
+    font-size:clamp(56px,15vw,120px);font-weight:400;
+    transition:opacity .08s linear}
+  .flashnum.roman{color:var(--brass)}
+  .flashnum.dim{opacity:0}
+  .flashnum.sign{color:var(--cinnabar)}
+  .flashcap{font-family:var(--mono);font-size:12px;letter-spacing:.22em;
+    text-transform:uppercase;color:var(--bone-dim);margin-top:14px}
+  .flashzone.win{box-shadow:inset 0 0 0 2px #6f8f5e, inset 0 2px 18px #00000080}
+  .flashzone.lose{box-shadow:inset 0 0 0 2px var(--cinnabar), inset 0 2px 18px #00000080}
+  .verdict{font-family:var(--serif);font-size:clamp(28px,6vw,46px)}
+  .verdict.win{color:#9ec089} .verdict.lose{color:#e07a63}
+  .seqline{font-family:var(--mono);font-size:14px;color:var(--bone-dim);margin-top:10px;
+    letter-spacing:.04em;word-break:break-word;padding:0 6px}
+  .seqline b{color:var(--bone);font-weight:400}
+  .ansRoman{font-family:var(--serif);color:var(--brass);font-size:18px;margin-top:4px}
+
+  .settings{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
+    gap:12px 18px;margin-top:18px}
+  .set{display:flex;flex-direction:column;gap:6px;min-width:0}
+  .set>span{font-family:var(--mono);font-size:10.5px;letter-spacing:.2em;
+    text-transform:uppercase;color:var(--brass)}
+  .seg{display:flex;border:1px solid #46341f;border-radius:999px;overflow:hidden;width:100%}
+  .seg button{flex:1 1 0;min-width:0;font-family:var(--mono);font-size:11.5px;border:none;background:transparent;
+    color:var(--bone-dim);padding:7px 6px;cursor:pointer;transition:all .15s;white-space:nowrap}
+  .seg button+button{border-left:1px solid #46341f}
+  .seg button[aria-pressed="true"]{background:var(--cinnabar);color:var(--bone)}
+  .seg button:focus-visible{outline:2px solid var(--brass);outline-offset:-2px}
+
+  .anzan-actions{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:20px}
+  .go{font-family:var(--mono);font-size:14px;letter-spacing:.08em;text-transform:uppercase;
+    background:var(--brass);color:#1a120a;border:none;border-radius:999px;
+    padding:12px 26px;cursor:pointer;transition:filter .15s;font-weight:700}
+  .go:hover{filter:brightness(1.08)} .go:focus-visible{outline:2px solid var(--bone);outline-offset:2px}
+  .go.ghost{background:transparent;color:var(--bone);border:1px solid #46341f;font-weight:400}
+  #ansField{font-family:var(--mono);font-size:26px;background:#0e0805;color:var(--bone);
+    border:1px solid #46341f;border-radius:10px;padding:8px 14px;width:160px;outline:none;text-align:center}
+  #ansField:focus{border-color:var(--brass)}
+  .score{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--bone-dim);
+    letter-spacing:.06em;display:flex;gap:16px}
+  .score b{color:var(--brass);font-weight:700}
+  .hidden{display:none!important}
+
+  /* ---------- IX demo ---------- */
+  .demo{margin-top:clamp(16px,2.5vw,22px);background:linear-gradient(180deg,#221710,#140c06);
+    border:1px solid #0c0805;border-radius:14px;box-shadow:0 26px 60px -34px #000,inset 0 1px 0 #ffffff10;
+    padding:clamp(16px,2.6vw,26px)}
+  .demo h2{font-weight:400;font-size:clamp(21px,3.6vw,30px);margin:.25em 0 0;letter-spacing:-.01em}
+  .demo h2 em{font-style:italic;color:var(--brass)}
+  .demo .sub{color:var(--bone-dim);font-size:14px;margin:9px 0 0;max-width:64ch;line-height:1.55}
+  .demo-grid{display:grid;grid-template-columns:minmax(150px,1fr) minmax(210px,1.5fr);
+    gap:clamp(14px,3vw,30px);align-items:center;margin-top:22px}
+  @media(max-width:620px){.demo-grid{grid-template-columns:1fr}}
+  .stage-cap{font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--brass);text-align:center;margin-bottom:8px}
+  .mini,.handsvg{display:block;width:100%;height:auto}
+  .finger,.thumb{transform-box:fill-box;cursor:pointer;transition:transform .26s cubic-bezier(.2,.8,.2,1)}
+  .finger{transform-origin:center bottom}
+  .fbody,.tbody{transition:fill .2s,stroke .2s}
+  .mbead{cursor:pointer;transition:transform .26s cubic-bezier(.2,.8,.2,1),fill .2s,stroke .2s}
+  .mbead:focus-visible .body,.finger:focus-visible .fbody,.thumb:focus-visible .tbody{outline:none;stroke:var(--brass);stroke-width:2.6}
+  @media(prefers-reduced-motion:reduce){.finger,.thumb,.mbead,.fbody,.tbody{transition:none}}
+  .handlab{font-family:var(--mono);font-size:11px;fill:var(--bone-dim);text-anchor:middle;letter-spacing:.12em}
+  .handval{font-family:var(--serif);font-size:22px;fill:var(--bone);text-anchor:middle}
+  .mini .lab{font-family:var(--mono)}
+
+  .methods{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:22px}
+  .stepper{display:inline-flex;align-items:center;gap:10px;font-family:var(--mono);font-size:12px;
+    color:var(--bone-dim);letter-spacing:.06em}
+  .stepper button{width:30px;height:30px;border-radius:8px;border:1px solid #46341f;background:#0e0805;
+    color:var(--bone);font-size:17px;line-height:1;cursor:pointer}
+  .stepper button:hover{border-color:var(--brass)}
+  .stepper b{color:var(--brass);font-size:22px;font-family:var(--serif);min-width:1.2ch;text-align:center}
+  .mbtn{font-family:var(--mono);font-size:12.5px;border-radius:999px;cursor:pointer;border:1px solid #46341f;
+    background:#ffffff10;color:var(--bone);padding:9px 16px;transition:all .15s}
+  .mbtn:hover{border-color:var(--brass)} .mbtn:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+  .mbtn.short{background:var(--brass);color:#1a120a;border-color:var(--brass);font-weight:700}
+  .mbtn[disabled]{opacity:.4;cursor:default;pointer-events:none}
+  .cap{font-family:var(--serif);font-size:clamp(15px,2vw,18px);color:var(--bone);min-height:2.7em;
+    margin-top:18px;line-height:1.5}
+  .cap b{color:var(--brass);font-style:italic;font-weight:400}
+  .cap .stuck{color:var(--cinnabar);font-style:normal}
+  .moves{font-family:var(--mono);font-size:11px;color:var(--bone-dim);margin-top:4px;letter-spacing:.05em;min-height:1.2em}
+
+  footer{margin-top:30px;color:var(--bone-dim);font-size:14px;max-width:60ch}
+  footer b{color:var(--bone);font-weight:400;font-style:italic}
+  .legend{display:flex;gap:18px;flex-wrap:wrap;font-family:var(--mono);font-size:11px;
+    color:var(--bone-dim);margin-top:16px;letter-spacing:.04em}
+  .legend span{display:inline-flex;align-items:center;gap:7px}
+  .sw{width:13px;height:13px;border-radius:3px;display:inline-block}
+
+  @media(max-width:640px){
+    body{padding-left:9px;padding-right:9px}
+    .instrument{padding:7px;border-radius:10px}
+    .frame-wrap{padding:5px;border-radius:8px}
+    .anzan,.demo{padding-left:14px;padding-right:14px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Biquinary · three notations · one number</p>
+    <h1>The abacus <em>remembers</em> Rome.</h1>
+    <p class="lede">Every soroban rod is a Roman column: four unit beads and one five-bead — I&nbsp;and&nbsp;V, X&nbsp;and&nbsp;L, C&nbsp;and&nbsp;D, then the vinculum beyond. Move a bead, type a numeral, or enter a figure. All three answer at once.</p>
+  </header>
+
+  <section class="instrument" aria-label="Interactive soroban">
+    <div class="frame-wrap">
+      <svg class="abacus" id="abacus" viewBox="20 12 520 480" role="group" aria-label="Soroban, seven rods"></svg>
+    </div>
+    <div class="inrow">
+      <div class="inpair">
+        <span class="inlabel">Arabic</span>
+        <input class="infield" id="arabic" inputmode="numeric" autocomplete="off" spellcheck="false" aria-label="Arabic number" value="0">
+      </div>
+      <div class="inpair">
+        <span class="inlabel">Roman</span>
+        <input class="infield" id="roman" autocomplete="off" spellcheck="false" aria-label="Roman numeral" value="">
+        <p class="hint" id="romanHint">IX or VIIII both parse · wrap in [ ] to ×1000 — [V] = 5,000</p>
+      </div>
+    </div>
+    <div class="controls">
+      <div class="chips" id="chips"></div>
+      <button class="toggle" id="glyphToggle" aria-pressed="true">Bead letters</button>
+      <button class="btn" id="clearBtn">Clear</button>
+    </div>
+    <div class="legend" aria-hidden="true">
+      <span><i class="sw" style="background:var(--cinnabar)"></i> reckoned (touching the bar)</span>
+      <span><i class="sw" style="background:var(--bone)"></i> at rest</span>
+      <span>tap a bead to set its rod</span>
+    </div>
+  </section>
+
+  <section class="anzan" aria-label="Flash anzan trainer">
+    <p class="eyebrow">Flash anzan · sum it in the mind's soroban</p>
+    <div class="flashzone" id="flashzone">
+      <div class="flashnum" id="flashnum">anzan</div>
+      <div class="flashcap" id="flashcap">set the drill, then begin</div>
+    </div>
+
+    <div class="settings">
+      <label class="set"><span>Terms</span>
+        <span class="seg" id="setTerms" role="group" aria-label="Number of terms"></span></label>
+      <label class="set"><span>Digits</span>
+        <span class="seg" id="setDigits" role="group" aria-label="Digits per term"></span></label>
+      <label class="set"><span>Pace</span>
+        <span class="seg" id="setPace" role="group" aria-label="Flash pace"></span></label>
+      <label class="set"><span>Operations</span>
+        <span class="seg" id="setOps" role="group" aria-label="Operations"></span></label>
+      <label class="set"><span>Flash as</span>
+        <span class="seg" id="setStyle" role="group" aria-label="Numeral style"></span></label>
+      <label class="set"><span>Training wheels</span>
+        <span class="seg" id="setBeads" role="group" aria-label="Mirror running total on the soroban"></span></label>
+    </div>
+
+    <div class="anzan-actions">
+      <button class="go" id="startBtn">Begin drill</button>
+      <input class="hidden" id="ansField" inputmode="numeric" autocomplete="off" spellcheck="false" aria-label="Your total" placeholder="?">
+      <button class="go hidden" id="checkBtn">Check</button>
+      <button class="go ghost hidden" id="nextBtn">Next</button>
+      <div class="score">
+        <span>streak <b id="streak">0</b></span>
+        <span>best <b id="best">0</b></span>
+      </div>
+    </div>
+  </section>
+
+  <section class="demo" aria-label="Why nine is IX">
+    <p class="eyebrow">The complement, by hand</p>
+    <h2>Why nine is <em>IX</em>, not VIIII</h2>
+    <p class="sub">One column — a single rod, a single hand — stops at nine. So you can never pile nine more onto a digit that isn't already zero: it overflows every time. The way through is the complement — add a ten, take one back. Pick a starting digit and try both paths.</p>
+
+    <div class="demo-grid">
+      <div>
+        <div class="stage-cap">two-rod soroban · tens, units</div>
+        <svg class="mini" id="mini" viewBox="0 0 240 284" role="img" aria-label="Two-rod soroban"></svg>
+      </div>
+      <div>
+        <div class="stage-cap">hand abacus</div>
+        <svg class="handsvg" id="hands" viewBox="0 0 300 222" role="img" aria-label="Two hands counting"></svg>
+      </div>
+    </div>
+
+    <div class="methods">
+      <span class="stepper">units
+        <button id="dMinus" aria-label="Lower units">&minus;</button>
+        <b id="dVal">3</b>
+        <button id="dPlus" aria-label="Raise units">+</button>
+      </span>
+      <button class="mbtn" id="longBtn">Pile on +9</button>
+      <button class="mbtn short" id="shortBtn">+10 &minus; 1</button>
+      <button class="mbtn" id="demoReset">Reset</button>
+    </div>
+    <p class="cap" id="demoCap"></p>
+    <p class="moves" id="demoMoves"></p>
+  </section>
+
+  <footer>
+    Nine sits on a single rod as <b>VIIII</b> — four units beneath one five. Yet to <em>add</em> nine you push ten and take one back: +X −I, the very gesture that froze into <b>IX</b>. The one mark with no Roman letter is the empty rod: zero, the thing Rome could set down but never name.
+  </footer>
+</div>
+
+<script>
+"use strict";
+/* ===== verified numeric core (ported from tested module) ===== */
+const RODS=7, MAX=10**RODS-1;
+const valueToRods=v=>{const r=[];for(let i=0;i<RODS;i++)r.push(Math.floor(v/10**i)%10);return r;};
+const SYM={1:['I',0],5:['V',0],10:['X',0],50:['L',0],100:['C',0],500:['D',0],1000:['M',0],
+  5000:['V',1],10000:['X',1],50000:['L',1],100000:['C',1],500000:['D',1],1000000:['M',1],
+  5000000:['V',2],10000000:['X',2]};
+const tok=v=>({ch:SYM[v][0],bars:SYM[v][1]});
+const triad=p=>[tok(10**p),tok(5*10**p),tok(10**(p+1))];
+function subTokens(v){const out=[];for(let p=RODS-1;p>=0;p--){const d=Math.floor(v/10**p)%10;const[o,f,t]=triad(p);
+  out.push(...({0:[],1:[o],2:[o,o],3:[o,o,o],4:[o,f],5:[f],6:[f,o],7:[f,o,o],8:[f,o,o,o],9:[o,t]}[d]));}return out;}
+function addTokens(rods){const out=[];for(let p=RODS-1;p>=0;p--){const d=rods[p],h=d>=5?1:0,e=d%5;const[o,f]=triad(p);
+  for(let i=0;i<h;i++)out.push(f);for(let i=0;i<e;i++)out.push(o);}return out;}
+const BAR=['','\u0305','\u0305\u0305'];
+const tokStr=t=>t.map(x=>x.ch+BAR[x.bars]).join('');
+function rodRoman(p,d){const[o,f,t]=triad(p);return tokStr({0:[],1:[o],2:[o,o],3:[o,o,o],4:[o,f],5:[f],6:[f,o],7:[f,o,o],8:[f,o,o,o],9:[o,t]}[d]);}
+const BASE={I:1,V:5,X:10,L:50,C:100,D:500,M:1000};
+function parseRoman(s){
+  if(s==null)return null;
+  s=s.toUpperCase().replace(/[\s.]/g,'');
+  if(s==='')return 0;
+  const vals=[];let mult=1;
+  for(const c of s){
+    if(c==='['){mult=1000;continue;}
+    if(c===']'){mult=1;continue;}
+    if(c==='\u0305'){if(!vals.length)return null;vals[vals.length-1]*=1000;continue;}
+    if(!(c in BASE))return null;
+    vals.push(BASE[c]*mult);
+  }
+  let total=0;
+  for(let i=0;i<vals.length;i++){total += (i+1<vals.length && vals[i]<vals[i+1])? -vals[i] : vals[i];}
+  if(total<0||total>MAX)return null;
+  return total;
+}
+
+/* ===== abacus geometry ===== */
+const X0=69, STEP=70;            // rod x centres
+const rodX=i=>X0+STEP*(RODS-1-i); // units (i=0) rightmost, magnitude grows leftward
+const BAR_T=178, BAR_B=198;      // reckoning bar
+const HEAVEN_REST=70, HEAVEN_ON=158;          // heaven bead centre y
+const EARTH_ON=[214,248,282,316];   // earth active centres, slot 0 nearest the bar
+const DOWN=[300,334,368,402];       // earth rest centres, slot 0 highest of the bottom pile
+const BW=25, BH=13;           // bead half-extents
+
+const SVGNS="http://www.w3.org/2000/svg";
+const el=(n,a)=>{const e=document.createElementNS(SVGNS,n);for(const k in a)e.setAttribute(k,a[k]);return e;};
+function beadPath(){const w=BW,h=BH;
+  return `M0,${-h} Q${w},${-h*0.18} ${w},0 Q${w},${h*0.18} 0,${h} Q${-w},${h*0.18} ${-w},0 Q${-w},${-h*0.18} 0,${-h} Z`;}
+
+const svg=document.getElementById('abacus');
+const beadRefs=[]; // beadRefs[rod] = {heaven:{g,glyph,ovr}, earth:[{...}x4]}
+
+function buildAbacus(){
+  // frame
+  svg.appendChild(el('rect',{x:30,y:22,width:500,height:464,rx:10,fill:'none',stroke:'#2a1709',
+    'stroke-width':10}));
+  // rods (posts)
+  for(let i=0;i<RODS;i++){
+    svg.appendChild(el('line',{x1:rodX(i),y1:30,x2:rodX(i),y2:418,stroke:'#3a2614','stroke-width':3,'stroke-linecap':'round'}));
+  }
+  // reckoning bar
+  const bar=el('rect',{x:30,y:BAR_T,width:500,height:BAR_B-BAR_T,fill:'#caa45c'});
+  svg.appendChild(bar);
+  svg.appendChild(el('rect',{x:30,y:BAR_T,width:500,height:2,fill:'#f0d89a'}));
+  svg.appendChild(el('rect',{x:30,y:BAR_B-2,width:500,height:2,fill:'#7c5e26'}));
+  // unit dots on bar: rods 0,3,6 (units, thousands, millions)
+  [0,3,6].forEach(i=>svg.appendChild(el('circle',{cx:rodX(i),cy:(BAR_T+BAR_B)/2,r:3.2,fill:'#3a2a0c'})));
+
+  // beads
+  for(let i=0;i<RODS;i++){
+    const cx=rodX(i),[one,five]=triad(i);
+    const mk=(cy,glyphTok,slot,type)=>{
+      const g=el('g',{class:'bead',transform:`translate(${cx},${cy})`,tabindex:0,role:'button'});
+      g.appendChild(el('path',{class:'body',d:beadPath(),fill:'var(--bone)',stroke:'#6b3f23','stroke-width':1.4}));
+      const ovrs=[];
+      for(let bi=0;bi<glyphTok.bars;bi++){
+        const oy=-7-bi*3.4;
+        const o=el('line',{class:'ovr',x1:-9,y1:oy,x2:9,y2:oy,stroke:'transparent','stroke-width':1.6});
+        g.appendChild(o); ovrs.push(o);
+      }
+      const tx=el('text',{class:'glyph',x:0,y:0,'font-size':14,fill:'#2a2014'});
+      tx.textContent=glyphTok.ch;
+      g.appendChild(tx);
+      g.addEventListener('click',()=>onBead(i,type,slot));
+      g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();onBead(i,type,slot);}});
+      svg.appendChild(g);
+      return {g,glyph:tx,ovrs};
+    };
+    const ref={heaven:mk(HEAVEN_REST,five,0,'heaven'),earth:[]};
+    for(let s=0;s<4;s++) ref.earth.push(mk(DOWN[s],one,s,'earth'));
+    beadRefs.push(ref);
+  }
+  // per-rod label strip
+  svg.appendChild(el('rect',{x:31,y:429,width:498,height:53,fill:'#170f07'}));
+  svg.appendChild(el('line',{x1:35,y1:429,x2:525,y2:429,stroke:'#2e1d0e','stroke-width':1}));
+  for(let i=0;i<RODS;i++){
+    const cx=rodX(i);
+    const dt=el('text',{x:cx,y:449,'text-anchor':'middle','dominant-baseline':'central',
+      'font-size':14,'font-family':'ui-monospace,"SF Mono",Menlo,monospace',fill:'var(--bone)'});
+    dt.textContent='0';
+    svg.appendChild(dt);
+    const rt=el('text',{x:cx,y:471,'text-anchor':'middle','dominant-baseline':'central',
+      'font-size':11,'font-family':'Georgia,"Times New Roman",serif',fill:'var(--brass)'});
+    rt.textContent='';
+    svg.appendChild(rt);
+    beadRefs[i].digitTxt=dt;
+    beadRefs[i].romanTxt=rt;
+  }
+}
+
+/* ===== state & render ===== */
+let value=0, showGlyphs=true;
+
+function renderAbacus(v=value){
+  const rods=valueToRods(v);
+  for(let i=0;i<RODS;i++){
+    const d=rods[i],h=d>=5?1:0,e=d%5,ref=beadRefs[i],cx=rodX(i);
+    // heaven
+    ref.heaven.g.setAttribute('transform',`translate(${cx},${h?HEAVEN_ON:HEAVEN_REST})`);
+    setActive(ref.heaven,!!h);
+    // earth: beads 0..e-1 active (stack up from bar), rest stack at bottom
+    for(let s=0;s<4;s++){
+      const on=s<e;
+      const y = on ? EARTH_ON[s] : DOWN[s];
+      ref.earth[s].g.setAttribute('transform',`translate(${cx},${y})`);
+      setActive(ref.earth[s],on);
+    }
+  }
+  if(!beadRefs[0].digitTxt) return;
+  const msb=rods.reduce((m,d,i)=>d>0?i:m,-1);
+  for(let i=0;i<RODS;i++){
+    const d=rods[i],dim=i>msb;
+    beadRefs[i].digitTxt.textContent=String(d);
+    beadRefs[i].digitTxt.setAttribute('fill',dim?'#3a2614':'var(--bone)');
+    beadRefs[i].romanTxt.textContent=d===0?'':rodRoman(i,d);
+  }
+}
+function setActive(b,on){
+  const body=b.g.querySelector('.body');
+  body.setAttribute('fill',on?'var(--cinnabar)':'var(--bone)');
+  body.setAttribute('stroke',on?'var(--cinnabar-dk)':'#6b3f23');
+  b.glyph.setAttribute('fill', !showGlyphs?'transparent':(on?'var(--bone)':'#2a2014'));
+  b.glyph.style.opacity=showGlyphs?1:0;
+  const barColor = !showGlyphs?'transparent':(on?'var(--bone)':'#2a2014');
+  b.ovrs.forEach(o=>o.setAttribute('stroke',barColor));
+}
+
+function renderReading(){
+  const r=document.getElementById('reading');
+  if(!r) return;
+  r.textContent='';
+  const toks=addTokens(valueToRods(value));
+  if(!toks.length){ r.innerHTML='<span style="color:#9a8a68">nulla — the empty rod</span>'; return; }
+  for(const t of toks){
+    const s=document.createElement('span');
+    s.className='t'+(t.bars?(' b'+t.bars):'');
+    s.textContent=t.ch; r.appendChild(s);
+  }
+}
+
+function setValue(v,source){
+  value=Math.max(0,Math.min(MAX,v|0));
+  const a=document.getElementById('arabic'), rm=document.getElementById('roman');
+  if(source!=='arabic'||document.activeElement!==a) a.value=value.toLocaleString('en-US');
+  if(source!=='roman'||document.activeElement!==rm){ rm.value=tokStr(subTokens(value)); rm.classList.remove('bad'); }
+  renderAbacus(); renderReading();
+}
+
+function onBead(rod,type,slot){
+  const rods=valueToRods(value); let d=rods[rod];
+  if(type==='heaven'){ d = d>=5 ? d-5 : d+5; }
+  else { const e=d%5, base=d>=5?5:0;
+    const newE = (slot+1)<=e ? slot : slot+1;  // click active top → push down
+    d = base+newE;
+  }
+  rods[rod]=d; setValue(rods.reduce((x,n,i)=>x+n*10**i,0),'bead');
+}
+
+/* ===== inputs ===== */
+document.getElementById('arabic').addEventListener('input',e=>{
+  const digits=e.target.value.replace(/[^\d]/g,'').slice(0,7);
+  setValue(digits===''?0:parseInt(digits,10),'arabic');
+});
+const romanEl=document.getElementById('roman'), hintEl=document.getElementById('romanHint');
+romanEl.addEventListener('input',e=>{
+  const v=parseRoman(e.target.value);
+  if(v===null){ romanEl.classList.add('bad'); hintEl.classList.add('err'); hintEl.textContent='Not a numeral I can read — use I V X L C D M, [ ] for ×1000.'; }
+  else { romanEl.classList.remove('bad'); hintEl.classList.remove('err'); hintEl.textContent='IX or VIIII both parse · wrap in [ ] to ×1000 — [V] = 5,000'; setValue(v,'roman'); }
+});
+
+/* ===== controls ===== */
+const glyphBtn=document.getElementById('glyphToggle');
+glyphBtn.addEventListener('click',()=>{ showGlyphs=!showGlyphs; glyphBtn.setAttribute('aria-pressed',String(showGlyphs)); renderAbacus(); });
+document.getElementById('clearBtn').addEventListener('click',()=>setValue(0,'clear'));
+
+const EXAMPLES=[['IX',9],['XLIX',49],['MMXXVI',2026],['MCMLXXXIV',1984],['MMMCMXCIX',3999],['[V]',5000],['[X]MMXXVI',12026]];
+const chips=document.getElementById('chips');
+EXAMPLES.forEach(([label,v])=>{
+  const b=document.createElement('button'); b.className='chip'; b.textContent=label;
+  b.addEventListener('click',()=>setValue(v,'chip')); chips.appendChild(b);
+});
+
+/* ===== flash anzan ===== */
+const AZ={
+  terms:5, digits:1, pace:800, ops:'add', style:'arabic', beads:true,
+  seq:[], total:0, state:'idle', streak:0, best:0
+};
+
+function seg(id, options, key, render){
+  const host=document.getElementById(id);
+  options.forEach(([label,val])=>{
+    const b=document.createElement('button');
+    b.textContent=label; b.type='button';
+    b.setAttribute('aria-pressed', String(AZ[key]===val));
+    b.addEventListener('click',()=>{
+      if(AZ.state==='flashing'||AZ.state==='counting') return;
+      AZ[key]=val;
+      [...host.children].forEach(c=>c.setAttribute('aria-pressed','false'));
+      b.setAttribute('aria-pressed','true');
+      if(render) render(val);
+    });
+    host.appendChild(b);
+  });
+}
+seg('setTerms',[['3',3],['5',5],['10',10],['15',15]],'terms');
+seg('setDigits',[['1',1],['2',2],['3',3]],'digits');
+seg('setPace',[['Slow',1100],['Med',800],['Fast',520],['Blink',300]],'pace');
+seg('setOps',[['+ only','add'],['+ and \u2212','addsub']],'ops');
+seg('setStyle',[['Arabic','arabic'],['Roman','roman']],'style');
+seg('setBeads',[['Show',true],['Hide',false]],'beads');
+
+const fz=document.getElementById('flashzone'),
+      fnum=document.getElementById('flashnum'),
+      fcap=document.getElementById('flashcap'),
+      startBtn=document.getElementById('startBtn'),
+      ansField=document.getElementById('ansField'),
+      checkBtn=document.getElementById('checkBtn'),
+      nextBtn=document.getElementById('nextBtn'),
+      streakEl=document.getElementById('streak'),
+      bestEl=document.getElementById('best');
+const REDUCE=matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+const randDigits=d=>{const lo=d===1?1:10**(d-1), hi=10**d-1; return lo+Math.floor(Math.random()*(hi-lo+1));};
+
+function makeSequence(){
+  const seq=[]; let run=0;
+  for(let i=0;i<AZ.terms;i++){
+    let n=randDigits(AZ.digits);
+    let sign=1;
+    if(AZ.ops==='addsub' && i>0 && Math.random()<0.5 && run-n>=0) sign=-1;
+    if(run + sign*n < 0) sign=1;
+    if(run + sign*n > MAX) sign=-1;
+    run += sign*n;
+    seq.push(sign*n);
+  }
+  AZ.seq=seq; AZ.total=run;
+}
+
+function showFlash(text, cls){
+  fnum.className='flashnum'+(cls?' '+cls:'');
+  fnum.classList.add('dim');
+  // force reflow then show, for the blink
+  void fnum.offsetWidth;
+  fnum.textContent=text;
+  fnum.classList.remove('dim');
+}
+
+function setControlsLocked(lock){
+  document.querySelectorAll('.settings .seg button').forEach(b=>b.disabled=lock);
+}
+
+async function runDrill(){
+  if(AZ.state==='flashing'||AZ.state==='counting') return;
+  makeSequence();
+  AZ.state='counting'; setControlsLocked(true);
+  fz.classList.remove('win','lose');
+  startBtn.classList.add('hidden');
+  ansField.classList.add('hidden'); checkBtn.classList.add('hidden'); nextBtn.classList.add('hidden');
+  if(AZ.beads) renderAbacus(0);
+
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  fcap.textContent='ready';
+  for(const c of ['3','2','1']){ showFlash(c,'sign'); fcap.textContent='ready'; await wait(REDUCE?300:550); }
+
+  AZ.state='flashing'; fcap.textContent='watch';
+  let run=0;
+  const onTime=AZ.pace, gap=Math.max(90, Math.round(AZ.pace*0.28));
+  for(const term of AZ.seq){
+    run+=term;
+    const mag=Math.abs(term);
+    const txt = AZ.style==='roman' ? tokStr(subTokens(mag)) : String(mag);
+    const sign = term<0 ? '\u2212' : (run===term?'':'+');
+    showFlash((sign?sign:'')+txt, AZ.style==='roman'?'roman':null);
+    if(AZ.beads) renderAbacus(Math.max(0,run));
+    await wait(onTime);
+    fnum.classList.add('dim');                 // blank between flashes
+    await wait(gap);
+  }
+
+  AZ.state='answering';
+  fnum.className='flashnum'; fnum.textContent='= ?'; fnum.classList.remove('dim');
+  fcap.textContent=`how much, after ${AZ.seq.length} ${AZ.ops==='addsub'?'moves':'terms'}?`;
+  ansField.value=''; ansField.classList.remove('hidden'); checkBtn.classList.remove('hidden');
+  setControlsLocked(false);
+  ansField.focus();
+}
+
+function judge(){
+  if(AZ.state!=='answering') return;
+  const guess=parseInt(ansField.value.replace(/[^\d]/g,''),10);
+  const ok = guess===AZ.total;
+  AZ.state='result';
+  ansField.classList.add('hidden'); checkBtn.classList.add('hidden');
+  fz.classList.add(ok?'win':'lose');
+  fnum.className='flashnum';
+  fnum.innerHTML=`<span class="verdict ${ok?'win':'lose'}">${ok?'\u2713 right':'\u2717 '+AZ.total.toLocaleString('en-US')}</span>`;
+  // sequence line
+  const parts=AZ.seq.map((t,i)=> (i===0? (t<0?'\u2212':'')+Math.abs(t) : (t<0?' \u2212 ':' + ')+Math.abs(t)) ).join('');
+  fcap.innerHTML=`<span class="seqline">${parts} = <b>${AZ.total.toLocaleString('en-US')}</b></span>`
+    + `<div class="ansRoman">${tokStr(subTokens(AZ.total))}</div>`
+    + (ok?'' : `<div class="seqline">you said ${isNaN(guess)?'—':guess.toLocaleString('en-US')}</div>`);
+  if(ok){ AZ.streak++; AZ.best=Math.max(AZ.best,AZ.streak); } else { AZ.streak=0; }
+  streakEl.textContent=AZ.streak; bestEl.textContent=AZ.best;
+  setValue(Math.max(0,AZ.total),'anzan');   // reveal full answer in the converter above
+  nextBtn.classList.remove('hidden'); nextBtn.focus();
+}
+
+function resetDrill(){
+  AZ.state='idle'; fz.classList.remove('win','lose');
+  fnum.className='flashnum'; fnum.textContent='anzan';
+  fcap.textContent='set the drill, then begin';
+  nextBtn.classList.add('hidden'); startBtn.classList.remove('hidden'); startBtn.focus();
+}
+
+startBtn.addEventListener('click',runDrill);
+checkBtn.addEventListener('click',judge);
+nextBtn.addEventListener('click',()=>{ resetDrill(); runDrill(); });
+ansField.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); judge(); }});
+
+/* ===== "why nine is IX" demo ===== */
+// -- two-rod soroban --
+const MINI={el:document.getElementById('mini'),refs:[]};
+const M_X=[160,80];                 // units (right), tens (left)
+const M_BAR_T=96,M_BAR_B=110, M_HV_REST=42,M_HV_ON=86;
+const M_EON=[126,148,170,192], M_DOWN=[138,160,182,204], M_BW=22,M_BH=9;
+const mPath=()=>{const w=M_BW,h=M_BH;return `M0,${-h} Q${w},${-h*0.18} ${w},0 Q${w},${h*0.18} 0,${h} Q${-w},${h*0.18} ${-w},0 Q${-w},${-h*0.18} 0,${-h} Z`;};
+function buildMini(){
+  const s=MINI.el;
+  s.appendChild(el('rect',{x:14,y:10,width:212,height:264,rx:9,fill:'none',stroke:'#2a1709','stroke-width':9}));
+  for(let i=0;i<2;i++) s.appendChild(el('line',{x1:M_X[i],y1:14,x2:M_X[i],y2:210,stroke:'#3a2614','stroke-width':3,'stroke-linecap':'round'}));
+  s.appendChild(el('rect',{x:14,y:M_BAR_T,width:212,height:M_BAR_B-M_BAR_T,fill:'#caa45c'}));
+  s.appendChild(el('rect',{x:14,y:M_BAR_T,width:212,height:2,fill:'#f0d89a'}));
+  s.appendChild(el('circle',{cx:M_X[0],cy:(M_BAR_T+M_BAR_B)/2,r:3,fill:'#3a2a0c'}));
+  for(let i=0;i<2;i++){
+    const cx=M_X[i],[one,five]=triad(i), rod=i;
+    const mk=(cy,t,type,slot)=>{
+      const g=el('g',{class:'mbead',transform:`translate(${cx},${cy})`,tabindex:0,role:'button'});
+      g.setAttribute('aria-label',(type==='heaven'?'five-bead':'one-bead')+', '+(rod?'tens':'units')+' rod');
+      g.appendChild(el('path',{class:'body',d:mPath(),fill:'var(--bone)',stroke:'#6b3f23','stroke-width':1.3}));
+      const ov=el('line',{x1:-7,y1:-6,x2:7,y2:-6,stroke:'transparent','stroke-width':1.4});
+      const tx=el('text',{x:0,y:0,'font-size':12,fill:'#2a2014','text-anchor':'middle','dominant-baseline':'central','font-family':'Georgia,serif','font-weight':'700'});
+      tx.textContent=t.ch; g.appendChild(ov); g.appendChild(tx); s.appendChild(g);
+      const act=()=>onMiniBead(rod,type,slot);
+      g.addEventListener('click',act);
+      g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();act();}});
+      return {g,glyph:tx,ovr:ov,bars:t.bars};
+    };
+    const ref={heaven:mk(M_HV_REST,five,'heaven',0),earth:[]};
+    for(let k=0;k<4;k++) ref.earth.push(mk(M_DOWN[k],one,'earth',k));
+    MINI.refs.push(ref);
+  }
+  // per-rod label strip
+  s.appendChild(el('rect',{x:15,y:216,width:210,height:62,fill:'#170f07'}));
+  s.appendChild(el('line',{x1:18,y1:216,x2:222,y2:216,stroke:'#2e1d0e','stroke-width':1}));
+  for(let i=0;i<2;i++){
+    const cx=M_X[i];
+    const dt=el('text',{x:cx,y:236,'text-anchor':'middle','dominant-baseline':'central',
+      'font-size':14,'font-family':'ui-monospace,"SF Mono",Menlo,monospace',fill:'var(--bone)'});
+    dt.textContent='0';
+    s.appendChild(dt);
+    const rt=el('text',{x:cx,y:257,'text-anchor':'middle','dominant-baseline':'central',
+      'font-size':11,'font-family':'Georgia,"Times New Roman",serif',fill:'var(--brass)'});
+    rt.textContent='';
+    s.appendChild(rt);
+    MINI.refs[i].digitTxt=dt;
+    MINI.refs[i].romanTxt=rt;
+  }
+}
+function mAct(b,on){
+  const body=b.g.querySelector('.body');
+  body.setAttribute('fill',on?'var(--cinnabar)':'var(--bone)');
+  body.setAttribute('stroke',on?'var(--cinnabar-dk)':'#6b3f23');
+  b.glyph.setAttribute('fill',on?'var(--bone)':'#2a2014');
+  if(b.bars)b.ovr.setAttribute('stroke',on?'var(--bone)':'#2a2014');
+}
+function renderMini(v){
+  const ds=[v%10, Math.floor(v/10)%10];
+  const msb=ds[1]>0?1:ds[0]>0?0:-1;
+  for(let i=0;i<2;i++){
+    const d=ds[i],h=d>=5?1:0,e=d%5,ref=MINI.refs[i],cx=M_X[i];
+    ref.heaven.g.setAttribute('transform',`translate(${cx},${h?M_HV_ON:M_HV_REST})`); mAct(ref.heaven,!!h);
+    for(let k=0;k<4;k++){const on=k<e;ref.earth[k].g.setAttribute('transform',`translate(${cx},${on?M_EON[k]:M_DOWN[k]})`); mAct(ref.earth[k],on);}
+    if(!ref.digitTxt) continue;
+    const dim=i>msb;
+    ref.digitTxt.textContent=String(d);
+    ref.digitTxt.setAttribute('fill',dim?'#3a2614':'var(--bone)');
+    ref.romanTxt.textContent=d===0?'':rodRoman(i,d);
+  }
+}
+function flashRod(i){
+  const ref=MINI.refs[i], all=[ref.heaven,...ref.earth];
+  all.forEach(b=>{ const body=b.g.querySelector('.body'); body.setAttribute('stroke','#e7b04a'); body.setAttribute('stroke-width','3'); });
+  setTimeout(()=>all.forEach(b=>{ const body=b.g.querySelector('.body'); body.setAttribute('stroke-width','1.3'); renderMini(demoVal); }),600);
+}
+
+// -- chisanbop hands --
+const HANDS={el:document.getElementById('hands'),units:null,tens:null};
+function buildHand(cx, side, rod){       // side: 'units' | 'tens'
+  const g=el('g',{}); const palmW=84,palmH=56,palmY=130;
+  const inner = side==='units';          // units hand sits right → thumb on its left (inner)
+  g.appendChild(el('rect',{x:cx-palmW/2,y:palmY,width:palmW,height:palmH,rx:18,fill:'#6b3f23',stroke:'#3a2113','stroke-width':2}));
+  const fingers=[], [oneT,fiveT]=triad(rod);
+  for(let i=0;i<4;i++){
+    // tens hand: finger 0 is index (rightmost, near thumb); units hand: finger 0 is index (leftmost, near thumb)
+    const x = inner ? cx-30+i*20 : cx+30-i*20;
+    const fg=el('g',{class:'finger',tabindex:0,role:'button'});
+    fg.setAttribute('aria-label','finger '+(i+1)+', '+side+' hand');
+    const body=el('rect',{class:'fbody',x:x-7,y:palmY-66,width:14,height:70,rx:7,fill:'var(--bone)',stroke:'#6b3f23','stroke-width':1.4});
+    const label=el('text',{x:x,y:palmY-44,'text-anchor':'middle','dominant-baseline':'central',
+      'font-size':9,'font-family':'Georgia,"Times New Roman",serif',fill:'transparent','pointer-events':'none'});
+    label.textContent=oneT.ch;
+    fg.appendChild(body); fg.appendChild(label);
+    const act=()=>onFinger(rod,i);
+    fg.addEventListener('click',act);
+    fg.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();act();}});
+    g.appendChild(fg); fingers.push({fg,body,label});
+  }
+  const thumbW=28;
+  const tx = inner ? cx-palmW/2-thumbW : cx+palmW/2;
+  const tfg=el('g',{class:'thumb',tabindex:0,role:'button'});
+  tfg.style.transformOrigin = inner ? 'right center' : 'left center';
+  tfg.setAttribute('aria-label','thumb (five), '+side+' hand');
+  const tbody=el('rect',{class:'tbody',x:tx,y:palmY+4,width:thumbW,height:15,rx:7,fill:'var(--bone)',stroke:'#6b3f23','stroke-width':1.4});
+  const tlabel=el('text',{x:tx+thumbW/2,y:palmY+12,'text-anchor':'middle','dominant-baseline':'central',
+    'font-size':8,'font-family':'Georgia,"Times New Roman",serif',fill:'transparent','pointer-events':'none'});
+  tlabel.textContent=fiveT.ch;
+  tfg.appendChild(tbody); tfg.appendChild(tlabel);
+  const tAct=()=>onThumb(rod);
+  tfg.addEventListener('click',tAct);
+  tfg.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();tAct();}});
+  g.appendChild(tfg);
+  const val=el('text',{class:'handval',x:cx,y:198}); val.textContent='0';
+  const lab=el('text',{class:'handlab',x:cx,y:214}); lab.textContent = side==='units'?'units (×1)':'tens (×10)';
+  g.appendChild(val); g.appendChild(lab);
+  HANDS.el.appendChild(g);
+  return {fingers,thumb:{tfg,tbody,tlabel},val,side};
+}
+function renderHand(hand,digit){
+  const thumbOn=digit>=5, fa=digit%5;
+  hand.fingers.forEach(({fg,body,label},i)=>{const on=i<fa;
+    fg.style.transform = on?'scaleY(1)':'scaleY(.26)';
+    body.setAttribute('fill',on?'var(--cinnabar)':'var(--bone)');
+    label.setAttribute('fill',on?'var(--bone)':'transparent');});
+  const {tfg,tbody,tlabel}=hand.thumb;
+  tfg.style.transform = thumbOn?'scaleX(1)':'scaleX(.22)';
+  tbody.setAttribute('fill', thumbOn?'var(--cinnabar)':'var(--bone)');
+  tlabel.setAttribute('fill', thumbOn?'var(--bone)':'transparent');
+  hand.val.textContent=String(digit);
+}
+
+// -- readout --
+function renderDemo(v){ renderMini(v); renderHand(HANDS.units,v%10); renderHand(HANDS.tens,Math.floor(v/10)%10); }
+
+// -- state + direct interaction --
+let demoVal=3, demoBusy=false;
+const cap=document.getElementById('demoCap'), movesEl=document.getElementById('demoMoves'), dValEl=document.getElementById('dVal');
+const longBtn=document.getElementById('longBtn'), shortBtn=document.getElementById('shortBtn'),
+      dPlus=document.getElementById('dPlus'), dMinus=document.getElementById('dMinus'), demoReset=document.getElementById('demoReset');
+const REDUCE2=matchMedia('(prefers-reduced-motion:reduce)').matches;
+const wait=ms=>new Promise(r=>setTimeout(r,REDUCE2?Math.min(ms,180):ms));
+const rom=v=>tokStr(subTokens(v));
+const lockDemo=l=>{demoBusy=l;[longBtn,shortBtn,dPlus,dMinus,demoReset].forEach(b=>b.disabled=l);};
+
+const digitsOf=()=>[demoVal%10, Math.floor(demoVal/10)%10];   // [units, tens]
+function setDemo(v){ demoVal=Math.max(0,Math.min(99,v)); dValEl.textContent=demoVal%10; renderDemo(demoVal); exploreCap(demoVal); }
+function setRodDigit(rod,d){ const ds=digitsOf(); ds[rod]=d; setDemo(ds[0]+ds[1]*10); }
+
+function onMiniBead(rod,type,slot){ if(demoBusy)return; let d=digitsOf()[rod];
+  if(type==='heaven'){ d=d>=5?d-5:d+5; }
+  else { const e=d%5, base=d>=5?5:0, ne=(slot+1)<=e?slot:slot+1; d=base+ne; }
+  setRodDigit(rod,d);
+}
+function onFinger(rod,idx){ if(demoBusy)return; let d=digitsOf()[rod];
+  const e=d%5, base=d>=5?5:0, ne=(idx+1)<=e?idx:idx+1; setRodDigit(rod,base+ne);
+}
+function onThumb(rod){ if(demoBusy)return; let d=digitsOf()[rod]; setRodDigit(rod, d>=5?d-5:d+5); }
+
+function exploreCap(v){
+  const u=v%10;
+  if(u===9){
+    cap.innerHTML=`Units read <b>VIIII</b> — full. A single rod stops at nine, so the only way up is to carry a ten and drop one back: the <b>IX</b> move. Try it by hand — raise a tens bead, lower a unit.`;
+  } else {
+    cap.innerHTML=`Showing <b>${rom(v)}</b> (${v}). Tap beads or fingers on either instrument — they share one number. Then try to add nine to a single column and feel it run out.`;
+  }
+  movesEl.textContent='';
+}
+
+// -- guided demonstrations (act on whatever is currently shown) --
+async function longWay(){
+  if(demoBusy) return; lockDemo(true);
+  cap.innerHTML=`The long way: pile nine onto the units rod as V + I + I + I + I…`; movesEl.textContent='';
+  await wait(650);
+  const incs=[5,1,1,1,1]; let moves=0;
+  for(const inc of incs){
+    if(demoVal%10 + inc <= 9){
+      demoVal+=inc; dValEl.textContent=demoVal%10; renderDemo(demoVal);
+      cap.innerHTML=`+${rom(inc)} → <b>${rom(demoVal)}</b>. Units rod now holds ${demoVal%10}.`;
+      movesEl.textContent=`${moves+1} bead move${moves?'s':''} so far`; moves++;
+      await wait(620);
+    } else {
+      flashRod(0);
+      cap.innerHTML=`<span class="stuck">Stuck.</span> The rod is full at <b>VIIII</b> — nine is all one column holds. No bead remains for the +${rom(inc)}, so you're forced onto the tens column. Adding nine to a nonzero digit <em>always</em> ends here.`;
+      movesEl.textContent=`${moves} move${moves===1?'':'s'} in — it cannot finish on one rod`;
+      lockDemo(false); return;
+    }
+  }
+  lockDemo(false);
+}
+
+async function shortWay(){
+  if(demoBusy) return; const start=demoVal;
+  if(start+9>99){
+    cap.innerHTML=`Two rods stop at <b>XCIX</b> (99). Add nine here and you'd overflow into a third column — the same lesson, one storey up.`;
+    movesEl.textContent=''; return;
+  }
+  lockDemo(true);
+  cap.innerHTML=`The short way: nine is one short of ten — add a ten, give one back.`; movesEl.textContent='';
+  await wait(650);
+  demoVal+=10; dValEl.textContent=demoVal%10; renderDemo(demoVal);
+  cap.innerHTML=`<b>+X</b> — carry one ten (the tens rod, the left hand's finger).`;
+  movesEl.textContent='1 move'; await wait(780);
+  demoVal-=1; dValEl.textContent=demoVal%10; renderDemo(demoVal);
+  cap.innerHTML=`<b>&minus;I</b> — take one unit back. You land on <b>${rom(demoVal)}</b> (${demoVal}).`;
+  movesEl.textContent='2 moves — and this works from any starting digit'; await wait(880);
+  cap.innerHTML=`${start} + 9 = ${start} + <b>X</b> &minus; <b>I</b>. That is exactly what <b>IX</b> records: the easy move, frozen into the numeral.`;
+  lockDemo(false);
+}
+
+// -- units stepper (synced with beads) --
+const nudge=delta=>{ if(demoBusy)return; const u=digitsOf()[0]; setRodDigit(0,Math.max(0,Math.min(9,u+delta))); };
+dPlus.addEventListener('click',()=>nudge(1));
+dMinus.addEventListener('click',()=>nudge(-1));
+longBtn.addEventListener('click',longWay);
+shortBtn.addEventListener('click',shortWay);
+demoReset.addEventListener('click',()=>{ if(!demoBusy) setDemo(0); });
+
+/* ===== boot ===== */
+buildAbacus();
+setValue(2026,'boot');
+buildMini();
+HANDS.units=buildHand(235,'units',0);
+HANDS.tens=buildHand(85,'tens',1);
+setDemo(3);
+</script>
+</body>
+</html>
