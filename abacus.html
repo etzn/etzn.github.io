@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>The abacus remembers Rome — soroban · Roman · Arabic</title>
+<title>The abacus remembers Rome</title>
 <style>
   :root{
     --ink:#17120f; --ink2:#221a14; --panel:#1d160f;
@@ -91,7 +91,9 @@
     background:#ffffff55;color:#4a3a26;padding:7px 13px;transition:all .15s}
   .chip:hover,.btn:hover{border-color:var(--cinnabar);color:var(--cinnabar)}
   .chip:focus-visible,.btn:focus-visible,.toggle:focus-visible{outline:2px solid var(--cinnabar);outline-offset:2px}
-  .toggle[aria-pressed="true"]{background:var(--cinnabar);color:var(--bone);border-color:var(--cinnabar-dk)}
+  .toggle[aria-pressed="true"]{background:var(--brass);color:#1a120a;border-color:var(--brass-dk)}
+  #clearBtn{background:var(--cinnabar);color:var(--bone);border-color:var(--cinnabar-dk)}
+  #clearBtn:hover{background:var(--cinnabar-dk);border-color:var(--cinnabar-dk)}
 
   /* ---------- anzan drill ---------- */
   .anzan{margin-top:clamp(16px,2.5vw,22px);
@@ -134,6 +136,16 @@
   .seg button+button{border-left:1px solid #46341f}
   .seg button[aria-pressed="true"]{background:var(--cinnabar);color:var(--bone)}
   .seg button:focus-visible{outline:2px solid var(--brass);outline-offset:-2px}
+
+  .settings-details{margin-top:18px}
+  .settings-details>.settings{margin-top:10px}
+  .settings-summary{list-style:none;font-family:var(--mono);font-size:10.5px;letter-spacing:.2em;
+    text-transform:uppercase;color:var(--brass);cursor:pointer;display:flex;align-items:center;
+    gap:7px;padding:6px 2px;border-bottom:1px solid #2e1d0e;user-select:none}
+  .settings-summary::-webkit-details-marker{display:none}
+  .settings-summary .arr{font-size:8px;display:inline-block;transition:transform .18s}
+  .settings-details[open] .settings-summary .arr{transform:rotate(90deg)}
+  .settings-summary:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
 
   .anzan-actions{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:20px}
   .go{font-family:var(--mono);font-size:14px;letter-spacing:.08em;text-transform:uppercase;
@@ -192,9 +204,7 @@
 
   footer{margin-top:30px;color:var(--bone-dim);font-size:14px;max-width:60ch}
   footer b{color:var(--bone);font-weight:400;font-style:italic}
-  .legend{display:flex;gap:18px;flex-wrap:wrap;font-family:var(--mono);font-size:11px;
-    color:var(--bone-dim);margin-top:16px;letter-spacing:.04em}
-  .legend span{display:inline-flex;align-items:center;gap:7px}
+  .leg{font-family:var(--mono);font-size:11px;color:var(--bone-dim);letter-spacing:.04em;display:inline-flex;align-items:center;gap:7px}
   .sw{width:13px;height:13px;border-radius:3px;display:inline-block}
 
   @media(max-width:640px){
@@ -210,7 +220,7 @@
   <header>
     <p class="eyebrow">Biquinary · three notations · one number</p>
     <h1>The abacus <em>remembers</em> Rome.</h1>
-    <p class="lede">Every soroban rod is a Roman column: four unit beads and one five-bead — I&nbsp;and&nbsp;V, X&nbsp;and&nbsp;L, C&nbsp;and&nbsp;D, then the vinculum beyond. Move a bead, type a numeral, or enter a figure. All three answer at once.</p>
+    <p class="lede">Every soroban rod is a Roman column: four unit beads and one five-bead — I&nbsp;and&nbsp;V, X&nbsp;and&nbsp;L, C&nbsp;and&nbsp;D, then the vinculum beyond.</p>
   </header>
 
   <section class="instrument" aria-label="Interactive soroban">
@@ -225,28 +235,28 @@
       <div class="inpair">
         <span class="inlabel">Roman</span>
         <input class="infield" id="roman" autocomplete="off" spellcheck="false" aria-label="Roman numeral" value="">
-        <p class="hint" id="romanHint">IX or VIIII both parse · wrap in [ ] to ×1000 — [V] = 5,000</p>
+        <p class="hint" id="romanHint">Wrap in [ ] to ×1000 — [V] = 5,000</p>
       </div>
     </div>
     <div class="controls">
-      <div class="chips" id="chips"></div>
-      <button class="toggle" id="glyphToggle" aria-pressed="true">Bead letters</button>
-      <button class="btn" id="clearBtn">Clear</button>
-    </div>
-    <div class="legend" aria-hidden="true">
-      <span><i class="sw" style="background:var(--cinnabar)"></i> reckoned (touching the bar)</span>
-      <span><i class="sw" style="background:var(--bone)"></i> at rest</span>
-      <span>tap a bead to set its rod</span>
+      <span class="leg" aria-hidden="true"><i class="sw" style="background:var(--cinnabar)"></i> reckoned</span>
+      <span class="leg" aria-hidden="true"><i class="sw" style="background:var(--bone)"></i> at rest</span>
+      <span style="margin-left:auto;display:flex;gap:10px;align-items:center">
+        <button class="toggle" id="glyphToggle" aria-pressed="true">Show letters on beads</button>
+        <button class="btn" id="clearBtn">Clear</button>
+      </span>
     </div>
   </section>
 
   <section class="anzan" aria-label="Flash anzan trainer">
-    <p class="eyebrow">Flash anzan · sum it in the mind's soroban</p>
+    <p class="eyebrow">Flash anzan · mental soroban practice</p>
     <div class="flashzone" id="flashzone">
       <div class="flashnum" id="flashnum">anzan</div>
       <div class="flashcap" id="flashcap">set the drill, then begin</div>
     </div>
 
+    <details class="settings-details">
+      <summary class="settings-summary"><span class="arr">&#9658;</span> Drill settings</summary>
     <div class="settings">
       <label class="set"><span>Terms</span>
         <span class="seg" id="setTerms" role="group" aria-label="Number of terms"></span></label>
@@ -261,6 +271,7 @@
       <label class="set"><span>Training wheels</span>
         <span class="seg" id="setBeads" role="group" aria-label="Mirror running total on the soroban"></span></label>
     </div>
+    </details>
 
     <div class="anzan-actions">
       <button class="go" id="startBtn">Begin drill</button>
@@ -277,15 +288,15 @@
   <section class="demo" aria-label="Why nine is IX">
     <p class="eyebrow">The complement, by hand</p>
     <h2>Why nine is <em>IX</em>, not VIIII</h2>
-    <p class="sub">One column — a single rod, a single hand — stops at nine. So you can never pile nine more onto a digit that isn't already zero: it overflows every time. The way through is the complement — add a ten, take one back. Pick a starting digit and try both paths.</p>
+    <p class="sub">When you add 9 to most numbers, there aren’t enough beads to add 5 and then add 4. Instead, you have to get there by adding 10 and then subtracting 1. So that’s how the Romans write it down! Try it out yourself.</p>
 
     <div class="demo-grid">
       <div>
-        <div class="stage-cap">two-rod soroban · tens, units</div>
+        <div class="stage-cap">two-rod soroban</div>
         <svg class="mini" id="mini" viewBox="0 0 240 284" role="img" aria-label="Two-rod soroban"></svg>
       </div>
       <div>
-        <div class="stage-cap">hand abacus</div>
+        <div class="stage-cap">chisanbop · the hand abacus</div>
         <svg class="handsvg" id="hands" viewBox="0 0 300 222" role="img" aria-label="Two hands counting"></svg>
       </div>
     </div>
@@ -303,10 +314,6 @@
     <p class="cap" id="demoCap"></p>
     <p class="moves" id="demoMoves"></p>
   </section>
-
-  <footer>
-    Nine sits on a single rod as <b>VIIII</b> — four units beneath one five. Yet to <em>add</em> nine you push ten and take one back: +X −I, the very gesture that froze into <b>IX</b>. The one mark with no Roman letter is the empty rod: zero, the thing Rome could set down but never name.
-  </footer>
 </div>
 
 <script>
@@ -329,7 +336,7 @@ function rodRoman(p,d){const[o,f,t]=triad(p);return tokStr({0:[],1:[o],2:[o,o],3
 const BASE={I:1,V:5,X:10,L:50,C:100,D:500,M:1000};
 function parseRoman(s){
   if(s==null)return null;
-  s=s.toUpperCase().replace(/[\s.]/g,'');
+  s=s.toUpperCase().replace(/J/g,'I').replace(/[\s.]/g,'');
   if(s==='')return 0;
   const vals=[];let mult=1;
   for(const c of s){
@@ -496,8 +503,8 @@ document.getElementById('arabic').addEventListener('input',e=>{
 const romanEl=document.getElementById('roman'), hintEl=document.getElementById('romanHint');
 romanEl.addEventListener('input',e=>{
   const v=parseRoman(e.target.value);
-  if(v===null){ romanEl.classList.add('bad'); hintEl.classList.add('err'); hintEl.textContent='Not a numeral I can read — use I V X L C D M, [ ] for ×1000.'; }
-  else { romanEl.classList.remove('bad'); hintEl.classList.remove('err'); hintEl.textContent='IX or VIIII both parse · wrap in [ ] to ×1000 — [V] = 5,000'; setValue(v,'roman'); }
+  if(v===null){ romanEl.classList.add('bad'); hintEl.classList.add('err'); hintEl.textContent='Not a numeral I can read — use I V X L C D M, J=I, [ ] for ×1000.'; }
+  else { romanEl.classList.remove('bad'); hintEl.classList.remove('err'); hintEl.textContent='wrap in [ ] to ×1000 — [V] = 5,000'; setValue(v,'roman'); }
 });
 
 /* ===== controls ===== */
@@ -505,12 +512,6 @@ const glyphBtn=document.getElementById('glyphToggle');
 glyphBtn.addEventListener('click',()=>{ showGlyphs=!showGlyphs; glyphBtn.setAttribute('aria-pressed',String(showGlyphs)); renderAbacus(); });
 document.getElementById('clearBtn').addEventListener('click',()=>setValue(0,'clear'));
 
-const EXAMPLES=[['IX',9],['XLIX',49],['MMXXVI',2026],['MCMLXXXIV',1984],['MMMCMXCIX',3999],['[V]',5000],['[X]MMXXVI',12026]];
-const chips=document.getElementById('chips');
-EXAMPLES.forEach(([label,v])=>{
-  const b=document.createElement('button'); b.className='chip'; b.textContent=label;
-  b.addEventListener('click',()=>setValue(v,'chip')); chips.appendChild(b);
-});
 
 /* ===== flash anzan ===== */
 const AZ={
