@@ -55,6 +55,13 @@
       linear-gradient(180deg,#7a4a2a,#502d18 60%,#3a2012);
     border-radius:12px; padding:clamp(8px,1.6vw,14px);
     box-shadow:inset 0 2px 4px #00000060, inset 0 0 0 1px #00000050, 0 2px 0 #ffffff14;
+    /* Cap the soroban to ~62vh tall so the inputs + controls stay in view.
+       Width is derived from the SVG aspect ratio (520/314); centred when capped. */
+    max-width:calc(62vh * 520 / 314);
+    margin-inline:auto;
+    /* Query container so the readout numerals can track the bead-label size:
+       bead glyphs are 14 units in a 520-wide viewBox = 2.69% of the width. */
+    container-type:inline-size;
   }
   svg.abacus{display:block;width:100%;height:auto;touch-action:manipulation}
   .bead{cursor:pointer; transition:transform .26s cubic-bezier(.2,.8,.2,1)}
@@ -69,18 +76,44 @@
   .ovr{pointer-events:none;transition:stroke .2s ease}
   @media (prefers-reduced-motion:reduce){.bead{transition:none}}
 
-  /* ---------- inline inputs ---------- */
-  .inrow{display:flex;gap:16px;margin-top:12px;flex-wrap:wrap;align-items:flex-start}
-  .inpair{flex:1 1 160px;min-width:0}
-  .inlabel{font-family:var(--mono);font-size:10px;letter-spacing:.22em;text-transform:uppercase;
-    color:var(--brass);display:block;margin-bottom:3px}
-  input.infield{width:100%;border:none;background:transparent;color:var(--bone);
-    border-bottom:1px solid #46341f;padding:4px 2px 6px;outline:none}
-  input.infield:focus{border-bottom-color:var(--brass)}
-  #arabic{font-family:var(--mono);font-size:clamp(17px,2.6vw,22px);letter-spacing:.02em}
-  #roman{font-family:var(--serif);font-size:clamp(15px,2.4vw,20px);letter-spacing:.04em}
-  #roman.bad{border-bottom-color:var(--cinnabar);color:var(--cinnabar)}
-  .hint{font-family:var(--mono);font-size:10px;color:#5a4a30;margin:3px 0 0;line-height:1.5}
+  /* ---------- per-rod readout / entry ----------
+     Numerals printed straight on the abacus, one under each rod — no separate
+     plate. Each cell's left:%, computed from rodX()/viewBox, lands under its
+     rod; the font (2.69cqw) matches the bead labels. Click a row to type the
+     whole value in a centred field; blur/Enter re-splits it. */
+  .readout{margin-top:clamp(2px,0.6vw,5px)}
+  .rorow{position:relative;cursor:text;border-radius:5px}
+  .rorow.roman{height:clamp(20px,4.2cqw,54px)}
+  .rorow.arabic{height:clamp(22px,3.9cqw,50px);margin-top:clamp(1px,0.3cqw,4px)}
+  .rorow:hover{background:#ffffff10}
+  .rorow.editing,.rorow.focused{background:#ffffff1c}
+  .cell{position:absolute;top:50%;transform:translate(-50%,-50%);white-space:nowrap;
+    pointer-events:none;transition:opacity .2s ease}
+  .rorow.arabic .cell{font-family:var(--mono);font-size:clamp(14px,3.0cqw,48px);color:var(--bone)}
+  .rorow.roman .cell{font-family:var(--serif);font-size:clamp(15px,3.3cqw,52px);color:var(--brass)}
+  /* vinculum (×1000) drawn as a real overline, not a combining char that
+     sits offset/overlapping the letter. .v2 stacks a second bar above. */
+  .rorow.roman .cell .v{display:inline-block;line-height:1;
+    text-decoration:overline;text-decoration-thickness:.05em}
+  .rorow.roman .cell .v2{position:relative}
+  .rorow.roman .cell .v2::before{content:"";position:absolute;left:0;right:0;
+    top:-.17em;border-top:.05em solid currentColor}
+  .cell.dim{opacity:.3}
+  .roedit{display:none;position:absolute;inset:0;width:100%;height:100%;border:none;
+    background:transparent;outline:none;text-align:center;padding:0;margin:0}
+  .rorow.arabic .roedit{display:block;font-family:var(--mono);font-size:clamp(14px,3.0cqw,48px);
+    letter-spacing:.06em;color:transparent;caret-color:transparent}
+  .rorow.roman .roedit{font-family:var(--serif);font-size:clamp(15px,3.1cqw,48px);letter-spacing:.04em;color:var(--brass)}
+  .roedit.bad{color:var(--cinnabar)}
+  .rorow.roman.editing .cell{visibility:hidden}
+  .rorow.roman.editing .roedit{display:block}
+  /* blinking text cursor that mirrors the input's real caret position */
+  .caret{position:absolute;top:50%;transform:translate(-50%,-50%);width:2px;
+    height:clamp(15px,3.4cqw,52px);background:var(--bone);opacity:0;pointer-events:none}
+  .rorow.arabic.focused .caret{opacity:1;animation:blink 1.05s steps(1) infinite}
+  @keyframes blink{50%{opacity:0}}
+  .hint{font-family:var(--mono);font-size:10px;color:#5a4a30;margin:5px 0 0;line-height:1.5;
+    text-align:center;padding:0 10px}
   .err{color:var(--cinnabar)}
 
   /* ---------- controls ---------- */
@@ -225,19 +258,13 @@
 
   <section class="instrument" aria-label="Interactive soroban">
     <div class="frame-wrap">
-      <svg class="abacus" id="abacus" viewBox="20 12 520 480" role="group" aria-label="Soroban, seven rods"></svg>
-    </div>
-    <div class="inrow">
-      <div class="inpair">
-        <span class="inlabel">Arabic</span>
-        <input class="infield" id="arabic" inputmode="numeric" autocomplete="off" spellcheck="false" aria-label="Arabic number" value="0">
-      </div>
-      <div class="inpair">
-        <span class="inlabel">Roman</span>
-        <input class="infield" id="roman" autocomplete="off" spellcheck="false" aria-label="Roman numeral" value="">
-        <p class="hint" id="romanHint">Wrap in [ ] to ×1000 — [V] = 5,000</p>
+      <svg class="abacus" id="abacus" viewBox="20 12 520 314" role="group" aria-label="Soroban, seven rods"></svg>
+      <div class="readout" id="readout">
+        <div class="rorow roman" id="roRoman" title="Click to type a Roman numeral"></div>
+        <div class="rorow arabic" id="roArabic" title="Click to type a number"></div>
       </div>
     </div>
+    <p class="hint" id="romanHint">Click a row to type · wrap Roman in [ ] to ×1000 — [V] = 5,000</p>
     <div class="controls">
       <span class="leg" aria-hidden="true"><i class="sw" style="background:var(--cinnabar)"></i> reckoned</span>
       <span class="leg" aria-hidden="true"><i class="sw" style="background:var(--bone)"></i> at rest</span>
@@ -332,7 +359,29 @@ function addTokens(rods){const out=[];for(let p=RODS-1;p>=0;p--){const d=rods[p]
   for(let i=0;i<h;i++)out.push(f);for(let i=0;i<e;i++)out.push(o);}return out;}
 const BAR=['','\u0305','\u0305\u0305'];
 const tokStr=t=>t.map(x=>x.ch+BAR[x.bars]).join('');
-function rodRoman(p,d){const[o,f,t]=triad(p);return tokStr({0:[],1:[o],2:[o,o],3:[o,o,o],4:[o,f],5:[f],6:[f,o],7:[f,o,o],8:[f,o,o,o],9:[o,t]}[d]);}
+// Editable/typing form: a vinculum (×1000 per bar) becomes nested [ ] brackets,
+// so V̅̅ M̅ X̅ X̅ VI  ->  [[V]MXX]VI. Round-trips through parseRoman.
+function tokBracket(toks){
+  let out='',depth=0;
+  for(const x of toks){
+    while(depth<x.bars){out+='[';depth++;}
+    while(depth>x.bars){out+=']';depth--;}
+    out+=x.ch;
+  }
+  while(depth>0){out+=']';depth--;}
+  return out;
+}
+function rodToks(p,d){const[o,f,t]=triad(p);return {0:[],1:[o],2:[o,o],3:[o,o,o],4:[o,f],5:[f],6:[f,o],7:[f,o,o],8:[f,o,o,o],9:[o,t]}[d];}
+function rodRoman(p,d){return tokStr(rodToks(p,d));}
+// Paint Roman tokens into an element, drawing any vinculum as a CSS overline
+// span rather than a combining char (which renders offset over the letter).
+function paintRoman(elm,toks){
+  elm.textContent='';
+  for(const x of toks){
+    if(x.bars){const s=document.createElement('span');s.className='v'+(x.bars>1?' v2':'');s.textContent=x.ch;elm.appendChild(s);}
+    else elm.appendChild(document.createTextNode(x.ch));
+  }
+}
 const BASE={I:1,V:5,X:10,L:50,C:100,D:500,M:1000};
 function parseRoman(s){
   if(s==null)return null;
@@ -340,12 +389,14 @@ function parseRoman(s){
   if(s==='')return 0;
   const vals=[];let mult=1;
   for(const c of s){
-    if(c==='['){mult=1000;continue;}
-    if(c===']'){mult=1;continue;}
+    if(c==='['){mult*=1000;continue;}             // each [ nests another \u00d71000
+    if(c===']'){if(mult===1)return null;mult/=1000;continue;}
     if(c==='\u0305'){if(!vals.length)return null;vals[vals.length-1]*=1000;continue;}
     if(!(c in BASE))return null;
     vals.push(BASE[c]*mult);
   }
+  if(mult!==1)return null;                         // unbalanced [
+
   let total=0;
   for(let i=0;i<vals.length;i++){total += (i+1<vals.length && vals[i]<vals[i+1])? -vals[i] : vals[i];}
   if(total<0||total>MAX)return null;
@@ -355,10 +406,10 @@ function parseRoman(s){
 /* ===== abacus geometry ===== */
 const X0=69, STEP=70;            // rod x centres
 const rodX=i=>X0+STEP*(RODS-1-i); // units (i=0) rightmost, magnitude grows leftward
-const BAR_T=178, BAR_B=198;      // reckoning bar
-const HEAVEN_REST=70, HEAVEN_ON=158;          // heaven bead centre y
-const EARTH_ON=[214,248,282,316];   // earth active centres, slot 0 nearest the bar
-const DOWN=[300,334,368,402];       // earth rest centres, slot 0 highest of the bottom pile
+const BAR_T=110, BAR_B=130;      // reckoning bar
+const HEAVEN_REST=56, HEAVEN_ON=90;           // heaven bead centre y (34px throw)
+const EARTH_ON=[146,180,214,248];   // earth active centres, slot 0 nearest the bar
+const DOWN=[194,228,262,296];       // earth rest centres (48px throw), slot 0 highest of the bottom pile
 const BW=25, BH=13;           // bead half-extents
 
 const SVGNS="http://www.w3.org/2000/svg";
@@ -371,11 +422,11 @@ const beadRefs=[]; // beadRefs[rod] = {heaven:{g,glyph,ovr}, earth:[{...}x4]}
 
 function buildAbacus(){
   // frame
-  svg.appendChild(el('rect',{x:30,y:22,width:500,height:464,rx:10,fill:'none',stroke:'#2a1709',
+  svg.appendChild(el('rect',{x:30,y:22,width:500,height:300,rx:10,fill:'none',stroke:'#2a1709',
     'stroke-width':10}));
   // rods (posts)
   for(let i=0;i<RODS;i++){
-    svg.appendChild(el('line',{x1:rodX(i),y1:30,x2:rodX(i),y2:418,stroke:'#3a2614','stroke-width':3,'stroke-linecap':'round'}));
+    svg.appendChild(el('line',{x1:rodX(i),y1:30,x2:rodX(i),y2:314,stroke:'#3a2614','stroke-width':3,'stroke-linecap':'round'}));
   }
   // reckoning bar
   const bar=el('rect',{x:30,y:BAR_T,width:500,height:BAR_B-BAR_T,fill:'#caa45c'});
@@ -409,22 +460,127 @@ function buildAbacus(){
     for(let s=0;s<4;s++) ref.earth.push(mk(DOWN[s],one,s,'earth'));
     beadRefs.push(ref);
   }
-  // per-rod label strip
-  svg.appendChild(el('rect',{x:31,y:429,width:498,height:53,fill:'#170f07'}));
-  svg.appendChild(el('line',{x1:35,y1:429,x2:525,y2:429,stroke:'#2e1d0e','stroke-width':1}));
+}
+
+/* ===== per-rod readout / entry (HTML, aligned under the rods) ===== */
+const VB_X=20, VB_W=520;                 // matches the SVG viewBox origin/width
+const rodPct=i=>((rodX(i)-VB_X)/VB_W)*100;
+const HALFSTEP=(STEP/VB_W)*100/2;        // half the inter-rod gap, in % of width
+const HINT_DEFAULT='Click a row to type · wrap Roman in [ ] to ×1000 — [V] = 5,000';
+const HINT_BAD='Not a numeral I can read — use I V X L C D M, J=I, [ ] for ×1000.';
+const aCells=[], rCells=[];
+let aInput, rInput, aCaret, aPos=0, roArabic, roRoman, roHint, editing=null, editStartValue=0;
+
+function buildReadout(){
+  roArabic=document.getElementById('roArabic');
+  roRoman=document.getElementById('roRoman');
+  roHint=document.getElementById('romanHint');
+  const cell=(left)=>{const s=document.createElement('span');s.className='cell';s.style.left=left+'%';return s;};
+  const field=(label)=>{const f=document.createElement('input');f.className='roedit';
+    f.autocomplete='off';f.spellcheck=false;f.setAttribute('aria-label',label);return f;};
   for(let i=0;i<RODS;i++){
-    const cx=rodX(i);
-    const dt=el('text',{x:cx,y:449,'text-anchor':'middle','dominant-baseline':'central',
-      'font-size':14,'font-family':'ui-monospace,"SF Mono",Menlo,monospace',fill:'var(--bone)'});
-    dt.textContent='0';
-    svg.appendChild(dt);
-    const rt=el('text',{x:cx,y:471,'text-anchor':'middle','dominant-baseline':'central',
-      'font-size':11,'font-family':'Georgia,"Times New Roman",serif',fill:'var(--brass)'});
-    rt.textContent='';
-    svg.appendChild(rt);
-    beadRefs[i].digitTxt=dt;
-    beadRefs[i].romanTxt=rt;
+    const a=cell(rodPct(i)); a.textContent='0'; roArabic.appendChild(a); aCells.push(a);
+    const r=cell(rodPct(i)); roRoman.appendChild(r); rCells.push(r);
   }
+
+  // Arabic: typed in place over a transparent <input> (gives focus + the mobile
+  // keyboard). Every rod is a real digit slot — typing OVERWRITES the slot at the
+  // caret and steps right toward the units; typing past the units odometer-appends
+  // (×10). So you can arrow/click onto a leading zero and type to set its place.
+  aInput=field('Number, type to enter'); aInput.inputMode='numeric';
+  aCaret=document.createElement('span'); aCaret.className='caret';
+  roArabic.appendChild(aCaret); roArabic.appendChild(aInput);
+  aInput.addEventListener('focus',()=>{ roArabic.classList.add('focused'); aPos=RODS; updateCaret(); });
+  aInput.addEventListener('blur',()=>roArabic.classList.remove('focused'));
+  aInput.addEventListener('input',()=>{ aInput.value=''; });   // state is driven by value + aPos
+  aInput.addEventListener('keydown',e=>{
+    if(/^\d$/.test(e.key)){ e.preventDefault(); typeDigit(+e.key); }
+    else if(e.key==='Backspace'){ e.preventDefault(); doBackspace(); }
+    else if(e.key==='Delete'){ e.preventDefault(); if(aPos<RODS){ const r=valueToRods(value); r[RODS-1-aPos]=0; setValue(r.reduce((x,n,i)=>x+n*10**i,0),'arabic'); updateCaret(); } }
+    else if(e.key==='ArrowLeft'){ e.preventDefault(); aPos=Math.max(0,aPos-1); updateCaret(); }
+    else if(e.key==='ArrowRight'){ e.preventDefault(); aPos=Math.min(RODS,aPos+1); updateCaret(); }
+    else if(e.key==='Home'){ e.preventDefault(); aPos=0; updateCaret(); }
+    else if(e.key==='End'){ e.preventDefault(); aPos=RODS; updateCaret(); }
+    else if(e.key==='Enter'||e.key==='Escape'){ e.preventDefault(); aInput.blur(); }
+  });
+  aInput.addEventListener('beforeinput',e=>{   // mobile / paste: keydown may not carry the key
+    if(e.inputType==='deleteContentBackward'){ e.preventDefault(); doBackspace(); return; }
+    if(e.data){ const ds=e.data.replace(/\D/g,''); if(ds){ e.preventDefault(); for(const c of ds) typeDigit(+c); } }
+  });
+  aInput.addEventListener('click',e=>{
+    const rect=roArabic.getBoundingClientRect();
+    const pct=((e.clientX-rect.left)/rect.width)*100;
+    let best=RODS, bd=Infinity;
+    for(let k=0;k<=RODS;k++){ const d=Math.abs(pct-caretXForPos(k)); if(d<bd){bd=d;best=k;} }
+    aPos=best; updateCaret();
+  });
+
+  // Roman: keeps its power-features ([ ]×1000, vinculum), so it stays a single
+  // centred field you commit on blur/Enter.
+  rInput=field('Roman numeral'); roRoman.appendChild(rInput);
+  rInput.addEventListener('input',()=>{
+    const v=parseRoman(rInput.value);
+    if(v===null){ rInput.classList.add('bad'); roHint.classList.add('err'); roHint.textContent=HINT_BAD; }
+    else { rInput.classList.remove('bad'); roHint.classList.remove('err'); roHint.textContent=HINT_DEFAULT; setValue(v,'roman'); }
+  });
+  roRoman.addEventListener('click',()=>{ if(editing!=='roman') beginRoman(); });
+  rInput.addEventListener('blur',endRoman);
+  rInput.addEventListener('keydown',e=>{
+    if(e.key==='Enter'){ e.preventDefault(); rInput.blur(); }
+    else if(e.key==='Escape'){ e.preventDefault(); setValue(editStartValue,'roman'); rInput.blur(); }
+  });
+}
+
+function beginRoman(){
+  if(editing==='roman') return;
+  editing='roman'; editStartValue=value;
+  roRoman.classList.add('editing');
+  rInput.value=tokBracket(subTokens(value)); rInput.classList.remove('bad');
+  rInput.focus(); rInput.select();
+}
+function endRoman(){
+  if(editing!=='roman') return;
+  editing=null;
+  roRoman.classList.remove('editing'); rInput.classList.remove('bad');
+  roHint.classList.remove('err'); roHint.textContent=HINT_DEFAULT;
+  renderReadout();
+}
+
+// Caret x (% of width) for gap position k in the 7-slot grid. Slot k (left→right)
+// is rod RODS-1-k; the gap sits half a step to its left. k===RODS is the "append"
+// position just right of the units rod.
+function caretXForPos(k){
+  if(k>=RODS) return rodPct(0)+HALFSTEP;
+  return rodPct(RODS-1-k)-HALFSTEP;
+}
+function updateCaret(){ aCaret.style.left=caretXForPos(aPos)+'%'; }
+function typeDigit(d){
+  if(aPos>=RODS){ setValue((value*10+d)%(10**RODS),'arabic'); }      // odometer append at the end
+  else {
+    const r=valueToRods(value); r[RODS-1-aPos]=d;                    // overwrite the slot at the caret
+    setValue(r.reduce((x,n,i)=>x+n*10**i,0),'arabic'); aPos++;       // step toward the units
+  }
+  updateCaret();
+}
+function doBackspace(){
+  if(aPos>=RODS){ setValue(Math.floor(value/10),'arabic'); }         // drop units, shift right
+  else if(aPos>0){
+    const r=valueToRods(value); r[RODS-1-(aPos-1)]=0;                // clear the slot left of the caret
+    setValue(r.reduce((x,n,i)=>x+n*10**i,0),'arabic'); aPos--;
+  }
+  updateCaret();
+}
+
+function renderReadout(source){
+  const rods=valueToRods(value);
+  const msb=rods.reduce((m,d,i)=>d>0?i:m,-1);
+  for(let i=0;i<RODS;i++){
+    const dim=i>msb;
+    aCells[i].textContent=String(rods[i]); aCells[i].classList.toggle('dim',dim);
+    if(rods[i]===0) rCells[i].textContent=''; else paintRoman(rCells[i],rodToks(i,rods[i])); rCells[i].classList.toggle('dim',dim);
+  }
+  if(document.activeElement===aInput) updateCaret();
+  if(editing==='roman' && source!=='roman') rInput.value=tokBracket(subTokens(value));
 }
 
 /* ===== state & render ===== */
@@ -444,14 +600,6 @@ function renderAbacus(v=value){
       ref.earth[s].g.setAttribute('transform',`translate(${cx},${y})`);
       setActive(ref.earth[s],on);
     }
-  }
-  if(!beadRefs[0].digitTxt) return;
-  const msb=rods.reduce((m,d,i)=>d>0?i:m,-1);
-  for(let i=0;i<RODS;i++){
-    const d=rods[i],dim=i>msb;
-    beadRefs[i].digitTxt.textContent=String(d);
-    beadRefs[i].digitTxt.setAttribute('fill',dim?'#3a2614':'var(--bone)');
-    beadRefs[i].romanTxt.textContent=d===0?'':rodRoman(i,d);
   }
 }
 function setActive(b,on){
@@ -479,10 +627,7 @@ function renderReading(){
 
 function setValue(v,source){
   value=Math.max(0,Math.min(MAX,v|0));
-  const a=document.getElementById('arabic'), rm=document.getElementById('roman');
-  if(source!=='arabic'||document.activeElement!==a) a.value=value.toLocaleString('en-US');
-  if(source!=='roman'||document.activeElement!==rm){ rm.value=tokStr(subTokens(value)); rm.classList.remove('bad'); }
-  renderAbacus(); renderReading();
+  renderAbacus(); renderReading(); renderReadout(source);
 }
 
 function onBead(rod,type,slot){
@@ -495,17 +640,6 @@ function onBead(rod,type,slot){
   rods[rod]=d; setValue(rods.reduce((x,n,i)=>x+n*10**i,0),'bead');
 }
 
-/* ===== inputs ===== */
-document.getElementById('arabic').addEventListener('input',e=>{
-  const digits=e.target.value.replace(/[^\d]/g,'').slice(0,7);
-  setValue(digits===''?0:parseInt(digits,10),'arabic');
-});
-const romanEl=document.getElementById('roman'), hintEl=document.getElementById('romanHint');
-romanEl.addEventListener('input',e=>{
-  const v=parseRoman(e.target.value);
-  if(v===null){ romanEl.classList.add('bad'); hintEl.classList.add('err'); hintEl.textContent='Not a numeral I can read — use I V X L C D M, J=I, [ ] for ×1000.'; }
-  else { romanEl.classList.remove('bad'); hintEl.classList.remove('err'); hintEl.textContent='wrap in [ ] to ×1000 — [V] = 5,000'; setValue(v,'roman'); }
-});
 
 /* ===== controls ===== */
 const glyphBtn=document.getElementById('glyphToggle');
@@ -869,6 +1003,7 @@ demoReset.addEventListener('click',()=>{ if(!demoBusy) setDemo(0); });
 
 /* ===== boot ===== */
 buildAbacus();
+buildReadout();
 setValue(2026,'boot');
 buildMini();
 HANDS.units=buildHand(235,'units',0);
