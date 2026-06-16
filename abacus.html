@@ -76,6 +76,32 @@
   .ovr{pointer-events:none;transition:stroke .2s ease}
   @media (prefers-reduced-motion:reduce){.bead{transition:none}}
 
+  /* ---------- abstraction dial ----------
+     One attribute on the SVG fades only #beadLayer, leaving frame/rods/bar solid.
+     L0/L1 (letters on/off) are handled by showGlyphs, not here. */
+  #beadLayer{transition:opacity .5s ease, filter .5s ease}
+  svg.abacus[data-abstraction="2"] #beadLayer{filter:saturate(.32) contrast(.82) brightness(.9);opacity:.45}
+  svg.abacus[data-abstraction="3"] #beadLayer{opacity:.1}
+  svg.abacus[data-abstraction="4"] #beadLayer{opacity:0;pointer-events:none}
+  svg.abacus[data-abstraction="4"] .bead{pointer-events:none}
+  /* Read / Complement: beads are the question, not an input */
+  .instrument.locked .bead{pointer-events:none;cursor:default}
+  /* Set miss: outline the rods that don't match the target (CSS property beats the
+     presentation stroke attribute set in setActive). */
+  .bead.diff .body{stroke:#e6c46a;stroke-width:3.2;filter:drop-shadow(0 0 4px #e6c46a99)}
+  /* sandbox-only chrome: the manual letter toggle and typing hint fight the dial in drill modes */
+  body:not([data-mode="sandbox"]) #glyphToggle,
+  body:not([data-mode="sandbox"]) #romanHint{display:none}
+
+  /* level-change toast */
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(12px);
+    background:#1d160f;color:var(--brass);border:1px solid var(--brass-dk);border-radius:999px;
+    font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;
+    padding:10px 20px;box-shadow:0 12px 30px -10px #000;opacity:0;pointer-events:none;
+    transition:opacity .3s,transform .3s;z-index:50}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  @media(prefers-reduced-motion:reduce){.toast{transition:opacity .3s}}
+
   /* ---------- per-rod readout / entry ----------
      Numerals printed straight on the abacus, one under each rod — no separate
      plate. Each cell's left:%, computed from rodX()/viewBox, lands under its
@@ -128,6 +154,69 @@
   #clearBtn{background:var(--cinnabar);color:var(--bone);border-color:var(--cinnabar-dk)}
   #clearBtn:hover{background:var(--cinnabar-dk);border-color:var(--cinnabar-dk)}
 
+  /* ---------- mode bar + abstraction ladder ---------- */
+  .moderow{display:flex;flex-wrap:wrap;gap:14px;align-items:center;
+    margin:clamp(14px,2.5vw,22px) 0 0}
+  .seg.modeSeg{flex:1 1 320px;max-width:560px}
+  .ladder{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;
+    letter-spacing:.12em;text-transform:uppercase;color:#5a4a30;margin-left:auto;user-select:none}
+  .ladder .rung{display:flex;align-items:center;gap:6px;background:none;border:none;
+    font:inherit;letter-spacing:inherit;text-transform:inherit;color:inherit;cursor:pointer;
+    padding:2px 3px;border-radius:5px;transition:color .3s,opacity .3s}
+  .ladder .rung:hover{color:var(--bone)}
+  .ladder .rung:focus-visible{outline:2px solid var(--brass);outline-offset:1px}
+  .ladder .rung .dot{width:9px;height:9px;border-radius:50%;background:#3a2614;
+    box-shadow:inset 0 0 0 1px #00000040;transition:background .3s,box-shadow .3s}
+  .ladder .rung.lit{color:var(--brass)}
+  .ladder .rung.lit .dot{background:var(--brass);box-shadow:0 0 8px var(--brass)}
+  .ladder .rung.done{color:var(--bone-dim)}
+  .ladder .rung.done .dot{background:var(--bone-dim)}
+  .ladder .arr{color:#3a2614;font-size:9px}
+  .autobtn{background:none;border:1px solid #3a2614;border-radius:999px;
+    font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;
+    color:#5a4a30;cursor:pointer;padding:3px 9px;margin-left:4px;transition:all .2s}
+  .autobtn.on{color:var(--brass);border-color:var(--brass-dk)}
+  .autobtn:hover{color:var(--bone)}
+  .autobtn:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+  @media(max-width:560px){.ladder{display:none}}
+
+  /* ---------- practice deck (Read · Set · Complements) ---------- */
+  .deck{margin-top:clamp(16px,2.5vw,22px);
+    background:linear-gradient(180deg,#241910,#150c06);
+    border:1px solid #0c0805;border-radius:14px;
+    box-shadow:0 26px 60px -34px #000, inset 0 1px 0 #ffffff10;
+    padding:clamp(16px,2.6vw,26px)}
+  .deck .eyebrow{margin-bottom:14px}
+  .deckflash{height:clamp(120px,22vw,180px);display:flex;flex-direction:column;
+    align-items:center;justify-content:center;text-align:center;
+    background:radial-gradient(80% 120% at 50% 40%,#2c1f12,#120a05);
+    border:1px solid #0c0805;border-radius:10px;
+    box-shadow:inset 0 2px 18px #00000080;overflow:hidden;margin-bottom:16px}
+  .deckflashnum{font-family:var(--serif);line-height:1;color:var(--bone);
+    font-size:clamp(54px,13vw,104px);font-weight:400;transition:opacity .08s linear}
+  .deckflashnum.roman{color:var(--brass)}
+  .deckflashnum.dim{opacity:0}
+  .deckflashcap{font-family:var(--mono);font-size:12px;letter-spacing:.2em;
+    text-transform:uppercase;color:var(--bone-dim);margin-top:12px}
+  .deckprompt{font-family:var(--serif);font-size:clamp(19px,3vw,26px);color:var(--bone);
+    text-align:center;min-height:1.4em;line-height:1.3}
+  .deckprompt em{font-style:italic;color:var(--brass)}
+  .deckprompt b{font-weight:400;color:var(--brass)}
+  .deckrow{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:center;margin-top:18px}
+  .deckfield{font-family:var(--mono);font-size:26px;background:#0e0805;color:var(--bone);
+    border:1px solid #46341f;border-radius:10px;padding:8px 14px;width:160px;outline:none;text-align:center}
+  .deckfield:focus{border-color:var(--brass)}
+  .deckscore{margin-left:0}
+  .deckfeedback{font-family:var(--mono);font-size:13px;color:var(--bone-dim);text-align:center;
+    margin-top:14px;min-height:1.3em;line-height:1.5}
+  .deckfeedback .ok{color:#9ec089} .deckfeedback .no{color:#e07a63}
+  .deckfeedback .ansRoman{font-family:var(--serif);color:var(--brass);font-size:18px}
+  .deckfeedback .muted{color:#5a4a30}
+  .comptype{display:flex;justify-content:center;margin-bottom:16px}
+  .comptype .seg{max-width:360px;flex:1 1 auto}
+  .deck.win{box-shadow:0 26px 60px -34px #000, inset 0 0 0 2px #6f8f5e}
+  .deck.lose{box-shadow:0 26px 60px -34px #000, inset 0 0 0 2px var(--cinnabar)}
+
   /* ---------- anzan drill ---------- */
   .anzan{margin-top:clamp(16px,2.5vw,22px);
     background:linear-gradient(180deg,#241910,#150c06);
@@ -146,6 +235,7 @@
     transition:opacity .08s linear}
   .flashnum.roman{color:var(--brass)}
   .flashnum.dim{opacity:0}
+  .flashnum.dim-num{opacity:.16}            /* Voice-only: faint placeholder, ear does the work */
   .flashnum.sign{color:var(--cinnabar)}
   .flashcap{font-family:var(--mono);font-size:12px;letter-spacing:.22em;
     text-transform:uppercase;color:var(--bone-dim);margin-top:14px}
@@ -195,18 +285,24 @@
   .hidden{display:none!important}
 
   /* ---------- IX demo ---------- */
-  .demo{margin-top:clamp(16px,2.5vw,22px);background:linear-gradient(180deg,#221710,#140c06);
-    border:1px solid #0c0805;border-radius:14px;box-shadow:0 26px 60px -34px #000,inset 0 1px 0 #ffffff10;
-    padding:clamp(16px,2.6vw,26px)}
-  .demo h2{font-weight:400;font-size:clamp(21px,3.6vw,30px);margin:.25em 0 0;letter-spacing:-.01em}
-  .demo h2 em{font-style:italic;color:var(--brass)}
-  .demo .sub{color:var(--bone-dim);font-size:14px;margin:9px 0 0;max-width:64ch;line-height:1.55}
-  .demo-grid{display:grid;grid-template-columns:minmax(150px,1fr) minmax(210px,1.5fr);
-    gap:clamp(14px,3vw,30px);align-items:center;margin-top:22px}
-  @media(max-width:620px){.demo-grid{grid-template-columns:1fr}}
-  .stage-cap{font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;
-    color:var(--brass);text-align:center;margin-bottom:8px}
-  .mini,.handsvg{display:block;width:100%;height:auto}
+  .demo-pair{display:flex;flex-wrap:wrap;gap:clamp(10px,2vw,16px);
+    margin-top:clamp(16px,2.5vw,22px);align-items:flex-start}
+  .demo{flex:1 1 240px;min-width:0;background:linear-gradient(180deg,#221710,#140c06);
+    border:1px solid #0c0805;border-radius:14px;
+    box-shadow:0 26px 60px -34px #000,inset 0 1px 0 #ffffff10;
+    padding:clamp(14px,2.2vw,22px)}
+  .demo-summary{list-style:none;display:flex;align-items:center;gap:8px;
+    font-family:var(--serif);font-weight:400;font-size:clamp(16px,2.2vw,21px);
+    line-height:1.1;letter-spacing:-.01em;color:var(--bone);
+    cursor:pointer;user-select:none;padding:0;margin:0}
+  .demo-summary::-webkit-details-marker{display:none}
+  .demo-summary em{font-style:italic;color:var(--brass)}
+  .demo-summary .arr{font-family:var(--mono);font-size:8px;color:var(--brass);
+    display:inline-block;flex-shrink:0;transition:transform .18s}
+  details.demo[open] .demo-summary .arr{transform:rotate(90deg)}
+  .demo-summary:focus-visible{outline:2px solid var(--brass);outline-offset:3px;border-radius:3px}
+  .demo .sub{color:var(--bone-dim);font-size:14px;margin:10px 0 0;max-width:56ch;line-height:1.55}
+  .mini,.handsvg{display:block;width:100%;height:auto;margin-top:clamp(10px,1.5vw,14px)}
   .finger,.thumb{transform-box:fill-box;cursor:pointer;transition:transform .26s cubic-bezier(.2,.8,.2,1)}
   .finger{transform-origin:center bottom}
   .fbody,.tbody{transition:fill .2s,stroke .2s}
@@ -216,24 +312,6 @@
   .handlab{font-family:var(--mono);font-size:11px;fill:var(--bone-dim);text-anchor:middle;letter-spacing:.12em}
   .handval{font-family:var(--serif);font-size:22px;fill:var(--bone);text-anchor:middle}
   .mini .lab{font-family:var(--mono)}
-
-  .methods{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:22px}
-  .stepper{display:inline-flex;align-items:center;gap:10px;font-family:var(--mono);font-size:12px;
-    color:var(--bone-dim);letter-spacing:.06em}
-  .stepper button{width:30px;height:30px;border-radius:8px;border:1px solid #46341f;background:#0e0805;
-    color:var(--bone);font-size:17px;line-height:1;cursor:pointer}
-  .stepper button:hover{border-color:var(--brass)}
-  .stepper b{color:var(--brass);font-size:22px;font-family:var(--serif);min-width:1.2ch;text-align:center}
-  .mbtn{font-family:var(--mono);font-size:12.5px;border-radius:999px;cursor:pointer;border:1px solid #46341f;
-    background:#ffffff10;color:var(--bone);padding:9px 16px;transition:all .15s}
-  .mbtn:hover{border-color:var(--brass)} .mbtn:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
-  .mbtn.short{background:var(--brass);color:#1a120a;border-color:var(--brass);font-weight:700}
-  .mbtn[disabled]{opacity:.4;cursor:default;pointer-events:none}
-  .cap{font-family:var(--serif);font-size:clamp(15px,2vw,18px);color:var(--bone);min-height:2.7em;
-    margin-top:18px;line-height:1.5}
-  .cap b{color:var(--brass);font-style:italic;font-weight:400}
-  .cap .stuck{color:var(--cinnabar);font-style:normal}
-  .moves{font-family:var(--mono);font-size:11px;color:var(--bone-dim);margin-top:4px;letter-spacing:.05em;min-height:1.2em}
 
   footer{margin-top:30px;color:var(--bone-dim);font-size:14px;max-width:60ch}
   footer b{color:var(--bone);font-weight:400;font-style:italic}
@@ -251,10 +329,14 @@
 <body>
 <div class="wrap">
   <header>
-    <p class="eyebrow">Biquinary · three notations · one number</p>
     <h1>The abacus <em>remembers</em> Rome.</h1>
-    <p class="lede">Every soroban rod is a Roman column: four unit beads and one five-bead — I&nbsp;and&nbsp;V, X&nbsp;and&nbsp;L, C&nbsp;and&nbsp;D, then the vinculum beyond.</p>
+    <p class="lede">The Japanese soroban abacus reveals the logical structure hidden inside Roman numerals. Each rod contains four unit beads and one five-bead: I&nbsp;and&nbsp;V, X&nbsp;and&nbsp;L, C&nbsp;and&nbsp;D, then the vinculum-marked thousands.</p>
   </header>
+
+  <nav class="moderow" aria-label="Practice mode">
+    <span class="seg modeSeg" id="modeSeg" role="group" aria-label="Practice mode"></span>
+    <div class="ladder" id="ladder" role="img" aria-label="Abstraction level"></div>
+  </nav>
 
   <section class="instrument" aria-label="Interactive soroban">
     <div class="frame-wrap">
@@ -275,7 +357,29 @@
     </div>
   </section>
 
-  <section class="anzan" aria-label="Flash anzan trainer">
+  <section class="deck hidden" id="deck" aria-label="Practice drill">
+    <p class="eyebrow" id="deckEyebrow">Read · name the value on the beads</p>
+    <div class="comptype hidden" id="compTypeWrap">
+      <span class="seg" id="compTypeSeg" role="group" aria-label="Complement type"></span>
+    </div>
+    <div class="deckflash hidden" id="deckFlash">
+      <div class="deckflashnum" id="deckFlashNum">0</div>
+      <div class="deckflashcap" id="deckFlashCap"></div>
+    </div>
+    <div class="deckprompt" id="deckPrompt"></div>
+    <div class="deckrow">
+      <input class="deckfield" id="deckField" inputmode="numeric" autocomplete="off" spellcheck="false" aria-label="Your answer" placeholder="?">
+      <button class="go" id="deckCheck">Check</button>
+      <button class="go ghost" id="deckNext">Next</button>
+      <div class="score deckscore">
+        <span>streak <b id="deckStreak">0</b></span>
+        <span>best <b id="deckBest">0</b></span>
+      </div>
+    </div>
+    <div class="deckfeedback" id="deckFeedback"></div>
+  </section>
+
+  <section class="anzan hidden" aria-label="Flash anzan trainer">
     <p class="eyebrow">Flash anzan · mental soroban practice</p>
     <div class="flashzone" id="flashzone">
       <div class="flashnum" id="flashnum">anzan</div>
@@ -297,7 +401,10 @@
         <span class="seg" id="setStyle" role="group" aria-label="Numeral style"></span></label>
       <label class="set"><span>Training wheels</span>
         <span class="seg" id="setBeads" role="group" aria-label="Mirror running total on the soroban"></span></label>
+      <label class="set"><span>Voice</span>
+        <span class="seg" id="setAudio" role="group" aria-label="Spoken terms"></span></label>
     </div>
+    <p class="hint" id="audioHint" style="text-align:left;color:#5a4a30">Voice reads each term aloud · “Voice only” hides the number for pure mental practice.</p>
     </details>
 
     <div class="anzan-actions">
@@ -312,35 +419,18 @@
     </div>
   </section>
 
-  <section class="demo" aria-label="Why nine is IX">
-    <p class="eyebrow">The complement, by hand</p>
-    <h2>Why nine is <em>IX</em>, not VIIII</h2>
-    <p class="sub">When you add 9 to most numbers, there aren’t enough beads to add 5 and then add 4. Instead, you have to get there by adding 10 and then subtracting 1. So that’s how the Romans write it down! Try it out yourself.</p>
-
-    <div class="demo-grid">
-      <div>
-        <div class="stage-cap">two-rod soroban</div>
-        <svg class="mini" id="mini" viewBox="0 0 240 284" role="img" aria-label="Two-rod soroban"></svg>
-      </div>
-      <div>
-        <div class="stage-cap">chisanbop · the hand abacus</div>
-        <svg class="handsvg" id="hands" viewBox="0 0 300 222" role="img" aria-label="Two hands counting"></svg>
-      </div>
-    </div>
-
-    <div class="methods">
-      <span class="stepper">units
-        <button id="dMinus" aria-label="Lower units">&minus;</button>
-        <b id="dVal">3</b>
-        <button id="dPlus" aria-label="Raise units">+</button>
-      </span>
-      <button class="mbtn" id="longBtn">Pile on +9</button>
-      <button class="mbtn short" id="shortBtn">+10 &minus; 1</button>
-      <button class="mbtn" id="demoReset">Reset</button>
-    </div>
-    <p class="cap" id="demoCap"></p>
-    <p class="moves" id="demoMoves"></p>
-  </section>
+  <div class="demo-pair">
+    <details class="demo" open>
+      <summary class="demo-summary"><span class="arr">&#9658;</span>Why nine is IX, not VIIII</summary>
+      <p class="sub">When you add nine to most numbers, there aren’t enough beads to add five and then add four: try it out yourself below. Instead, you have to get there by adding ten and then subtracting one. That’s how the Romans wrote nine: “one before ten”, or IX!</p>
+      <svg class="mini" id="mini" viewBox="0 0 240 284" role="img" aria-label="Two-rod soroban"></svg>
+      <p class="sub">Four is IV rather than IIII for the same reason. Can you prove it to yourself?</p>
+    </details>
+    <details class="demo" open>
+      <summary class="demo-summary"><span class="arr">&#9658;</span>The hand abacus</summary>
+      <svg class="handsvg" id="hands" viewBox="0 0 300 222" role="img" aria-label="Two hands counting"></svg>
+    </details>
+  </div>
 </div>
 
 <script>
@@ -353,8 +443,7 @@ const SYM={1:['I',0],5:['V',0],10:['X',0],50:['L',0],100:['C',0],500:['D',0],100
   5000000:['V',2],10000000:['X',2]};
 const tok=v=>({ch:SYM[v][0],bars:SYM[v][1]});
 const triad=p=>[tok(10**p),tok(5*10**p),tok(10**(p+1))];
-function subTokens(v){const out=[];for(let p=RODS-1;p>=0;p--){const d=Math.floor(v/10**p)%10;const[o,f,t]=triad(p);
-  out.push(...({0:[],1:[o],2:[o,o],3:[o,o,o],4:[o,f],5:[f],6:[f,o],7:[f,o,o],8:[f,o,o,o],9:[o,t]}[d]));}return out;}
+function subTokens(v){const out=[];for(let p=RODS-1;p>=0;p--){const d=Math.floor(v/10**p)%10;out.push(...rodToks(p,d));}return out;}
 function addTokens(rods){const out=[];for(let p=RODS-1;p>=0;p--){const d=rods[p],h=d>=5?1:0,e=d%5;const[o,f]=triad(p);
   for(let i=0;i<h;i++)out.push(f);for(let i=0;i<e;i++)out.push(o);}return out;}
 const BAR=['','\u0305','\u0305\u0305'];
@@ -419,6 +508,7 @@ function beadPath(){const w=BW,h=BH;
 
 const svg=document.getElementById('abacus');
 const beadRefs=[]; // beadRefs[rod] = {heaven:{g,glyph,ovr}, earth:[{...}x4]}
+let beadLayer=null; // <g> wrapping all bead groups, so the field fades independently of frame/rods/bar
 
 function buildAbacus(){
   // frame
@@ -436,12 +526,18 @@ function buildAbacus(){
   // unit dots on bar: rods 0,3,6 (units, thousands, millions)
   [0,3,6].forEach(i=>svg.appendChild(el('circle',{cx:rodX(i),cy:(BAR_T+BAR_B)/2,r:3.2,fill:'#3a2a0c'})));
 
+  // bead field — its own layer so the abstraction dial can desaturate / ghost / hide
+  // just the beads while the frame, rods and bar stay solid.
+  beadLayer=el('g',{id:'beadLayer'});
+  svg.appendChild(beadLayer);
+
   // beads
   for(let i=0;i<RODS;i++){
     const cx=rodX(i),[one,five]=triad(i);
     const mk=(cy,glyphTok,slot,type)=>{
       const g=el('g',{class:'bead',transform:`translate(${cx},${cy})`,tabindex:0,role:'button'});
-      g.appendChild(el('path',{class:'body',d:beadPath(),fill:'var(--bone)',stroke:'#6b3f23','stroke-width':1.4}));
+      const body=el('path',{class:'body',d:beadPath(),fill:'var(--bone)',stroke:'#6b3f23','stroke-width':1.4});
+      g.appendChild(body);
       const ovrs=[];
       for(let bi=0;bi<glyphTok.bars;bi++){
         const oy=-7-bi*3.4;
@@ -453,8 +549,8 @@ function buildAbacus(){
       g.appendChild(tx);
       g.addEventListener('click',()=>onBead(i,type,slot));
       g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();onBead(i,type,slot);}});
-      svg.appendChild(g);
-      return {g,glyph:tx,ovrs};
+      beadLayer.appendChild(g);
+      return {g,body,glyph:tx,ovrs};
     };
     const ref={heaven:mk(HEAVEN_REST,five,0,'heaven'),earth:[]};
     for(let s=0;s<4;s++) ref.earth.push(mk(DOWN[s],one,s,'earth'));
@@ -573,7 +669,7 @@ function doBackspace(){
 
 function renderReadout(source){
   const rods=valueToRods(value);
-  const msb=rods.reduce((m,d,i)=>d>0?i:m,-1);
+  const msb=Math.max(0,rods.reduce((m,d,i)=>d>0?i:m,-1));
   for(let i=0;i<RODS;i++){
     const dim=i>msb;
     aCells[i].textContent=String(rods[i]); aCells[i].classList.toggle('dim',dim);
@@ -603,41 +699,51 @@ function renderAbacus(v=value){
   }
 }
 function setActive(b,on){
-  const body=b.g.querySelector('.body');
-  body.setAttribute('fill',on?'var(--cinnabar)':'var(--bone)');
-  body.setAttribute('stroke',on?'var(--cinnabar-dk)':'#6b3f23');
-  b.glyph.setAttribute('fill', !showGlyphs?'transparent':(on?'var(--bone)':'#2a2014'));
-  b.glyph.style.opacity=showGlyphs?1:0;
-  const barColor = !showGlyphs?'transparent':(on?'var(--bone)':'#2a2014');
-  b.ovrs.forEach(o=>o.setAttribute('stroke',barColor));
-}
-
-function renderReading(){
-  const r=document.getElementById('reading');
-  if(!r) return;
-  r.textContent='';
-  const toks=addTokens(valueToRods(value));
-  if(!toks.length){ r.innerHTML='<span style="color:#9a8a68">nulla — the empty rod</span>'; return; }
-  for(const t of toks){
-    const s=document.createElement('span');
-    s.className='t'+(t.bars?(' b'+t.bars):'');
-    s.textContent=t.ch; r.appendChild(s);
-  }
+  b.body.setAttribute('fill',on?'var(--cinnabar)':'var(--bone)');
+  b.body.setAttribute('stroke',on?'var(--cinnabar-dk)':'#6b3f23');
+  const glyphColor=!showGlyphs?'transparent':(on?'var(--bone)':'#2a2014');
+  b.glyph.setAttribute('fill',glyphColor);
+  b.ovrs.forEach(o=>o.setAttribute('stroke',glyphColor));
 }
 
 function setValue(v,source){
   value=Math.max(0,Math.min(MAX,v|0));
-  renderAbacus(); renderReading(); renderReadout(source);
+  renderAbacus(); renderReadout(source);
 }
 
+/* ===== thin view API over the existing functions =====
+   The trainer drives the instrument only through these four calls, so the
+   numeric core and the controlled setter stay the single source of truth. */
+let abstractionLevel=0;
+const Abacus={
+  // commit a value (mutates state, repaints beads + readout)
+  set(v){ setValue(v,'trainer'); },
+  // paint any value as a pure view, WITHOUT touching `value` (for prompts)
+  show(v){ renderAbacus(v); },
+  // read the committed value
+  get(){ return value; },
+  // L0 letters-on · L1 beads · L2 desaturated · L3 ghost · L4 gone
+  level(n){
+    n=Math.max(0,Math.min(4,n|0));
+    abstractionLevel=n;
+    showGlyphs=(n===0);
+    glyphBtn.setAttribute('aria-pressed',String(showGlyphs));
+    svg.setAttribute('data-abstraction',String(n));
+    renderAbacus();
+  },
+  // show/hide the per-rod numeral readout under the soroban
+  readout(on){ document.getElementById('readout').classList.toggle('hidden',!on); }
+};
+
+function earthClick(d,slot){const e=d%5,base=d>=5?5:0,ne=(slot+1)<=e?slot:slot+1;return base+ne;}
 function onBead(rod,type,slot){
   const rods=valueToRods(value); let d=rods[rod];
   if(type==='heaven'){ d = d>=5 ? d-5 : d+5; }
-  else { const e=d%5, base=d>=5?5:0;
-    const newE = (slot+1)<=e ? slot : slot+1;  // click active top → push down
-    d = base+newE;
-  }
-  rods[rod]=d; setValue(rods.reduce((x,n,i)=>x+n*10**i,0),'bead');
+  else { d=earthClick(d,slot); }
+  rods[rod]=d;
+  setValue(rods.reduce((x,n,i)=>x+n*10**i,0),'bead');
+  if(editing==='roman') editStartValue=value;
+  if(document.body.dataset.mode==='set') clearDiff();   // fixing a rod clears its miss outline
 }
 
 
@@ -649,7 +755,7 @@ document.getElementById('clearBtn').addEventListener('click',()=>setValue(0,'cle
 
 /* ===== flash anzan ===== */
 const AZ={
-  terms:5, digits:1, pace:800, ops:'add', style:'arabic', beads:true,
+  terms:5, digits:1, pace:800, ops:'add', style:'arabic', beads:true, audio:'off',
   seq:[], total:0, state:'idle', streak:0, best:0
 };
 
@@ -658,6 +764,7 @@ function seg(id, options, key, render){
   options.forEach(([label,val])=>{
     const b=document.createElement('button');
     b.textContent=label; b.type='button';
+    b.dataset.key=key; b.dataset.val=String(val);     // so the seg can be synced programmatically
     b.setAttribute('aria-pressed', String(AZ[key]===val));
     b.addEventListener('click',()=>{
       if(AZ.state==='flashing'||AZ.state==='counting') return;
@@ -669,12 +776,21 @@ function seg(id, options, key, render){
     host.appendChild(b);
   });
 }
+// Reflect AZ.* back onto the seg buttons after a programmatic change (level binding).
+function syncFlashSegs(){
+  document.querySelectorAll('.settings .seg button').forEach(b=>{
+    if(!b.dataset.key) return;
+    b.setAttribute('aria-pressed', String(String(AZ[b.dataset.key])===b.dataset.val));
+  });
+}
 seg('setTerms',[['3',3],['5',5],['10',10],['15',15]],'terms');
 seg('setDigits',[['1',1],['2',2],['3',3]],'digits');
-seg('setPace',[['Slow',1100],['Med',800],['Fast',520],['Blink',300]],'pace');
+seg('setPace',[['Slow',1100],['Med',800],['Fast',520],['Blink',300]],'pace',
+    v=>{ Trainer.pace=v; saveState(); });   // a manual pace pick also seeds the adaptive pace
 seg('setOps',[['+ only','add'],['+ and \u2212','addsub']],'ops');
 seg('setStyle',[['Arabic','arabic'],['Roman','roman']],'style');
 seg('setBeads',[['Show',true],['Hide',false]],'beads');
+seg('setAudio',[['Off','off'],['Voice','voice'],['Voice only','voiceonly']],'audio');
 
 const fz=document.getElementById('flashzone'),
       fnum=document.getElementById('flashnum'),
@@ -686,8 +802,33 @@ const fz=document.getElementById('flashzone'),
       streakEl=document.getElementById('streak'),
       bestEl=document.getElementById('best');
 const REDUCE=matchMedia('(prefers-reduced-motion:reduce)').matches;
+const wait=ms=>new Promise(r=>setTimeout(r,REDUCE?Math.min(ms,180):ms));
 
 const randDigits=d=>{const lo=d===1?1:10**(d-1), hi=10**d-1; return lo+Math.floor(Math.random()*(hi-lo+1));};
+
+/* speechSynthesis is treated as pure enhancement: feature-detected, voices loaded
+   async, every call wrapped so a quirk (Safari / iOS gating) degrades silently to
+   visual. It is fire-and-forget — never awaited — so audio can't stall the flash loop. */
+const Speech={
+  supported:(typeof window!=='undefined' && 'speechSynthesis' in window && typeof SpeechSynthesisUtterance!=='undefined'),
+  voice:null,
+  init(){
+    if(!this.supported) return;
+    const pick=()=>{ try{ const vs=speechSynthesis.getVoices(); if(vs&&vs.length) this.voice=vs.find(v=>/^en/i.test(v.lang))||vs[0]; }catch(e){} };
+    pick();
+    try{ speechSynthesis.addEventListener('voiceschanged',pick); }catch(e){}   // voices often arrive late
+  },
+  say(text){
+    if(!this.supported) return;
+    try{
+      speechSynthesis.cancel();
+      const u=new SpeechSynthesisUtterance(text);
+      if(this.voice) u.voice=this.voice;
+      u.rate=1; u.pitch=1;
+      speechSynthesis.speak(u);
+    }catch(e){ /* never let a speech error reach the drill */ }
+  }
+};
 
 function makeSequence(){
   const seq=[]; let run=0;
@@ -716,8 +857,18 @@ function setControlsLocked(lock){
   document.querySelectorAll('.settings .seg button').forEach(b=>b.disabled=lock);
 }
 
+let flashGen=0;                  // bumped whenever a drill must abort (e.g. leaving Flash mode)
+// Abort any in-flight runDrill loop and restore the controls/state it locked.
+function stopFlash(){
+  flashGen++;
+  if(AZ.state==='counting'||AZ.state==='flashing'||AZ.state==='answering'){
+    AZ.state='idle'; setControlsLocked(false);
+  }
+}
+
 async function runDrill(){
   if(AZ.state==='flashing'||AZ.state==='counting') return;
+  const myGen=++flashGen;        // this run's token; a newer token (mode switch) makes us bail
   makeSequence();
   AZ.state='counting'; setControlsLocked(true);
   fz.classList.remove('win','lose');
@@ -725,23 +876,28 @@ async function runDrill(){
   ansField.classList.add('hidden'); checkBtn.classList.add('hidden'); nextBtn.classList.add('hidden');
   if(AZ.beads) renderAbacus(0);
 
-  const wait=ms=>new Promise(r=>setTimeout(r,ms));
   fcap.textContent='ready';
-  for(const c of ['3','2','1']){ showFlash(c,'sign'); fcap.textContent='ready'; await wait(REDUCE?300:550); }
+  for(const c of ['3','2','1']){ showFlash(c,'sign'); fcap.textContent='ready'; await wait(REDUCE?300:550); if(myGen!==flashGen) return; }
 
   AZ.state='flashing'; fcap.textContent='watch';
   let run=0;
   const onTime=AZ.pace, gap=Math.max(90, Math.round(AZ.pace*0.28));
   for(const term of AZ.seq){
+    if(myGen!==flashGen) return;
     run+=term;
     const mag=Math.abs(term);
     const txt = AZ.style==='roman' ? tokStr(subTokens(mag)) : String(mag);
-    const sign = term<0 ? '\u2212' : (run===term?'':'+');
-    showFlash((sign?sign:'')+txt, AZ.style==='roman'?'roman':null);
+    const first = run===term;
+    const sign = term<0 ? '\u2212' : (first?'':'+');
+    if(AZ.audio!=='off') Speech.say((term<0?'minus ':(first?'':'plus '))+mag);   // fire-and-forget
+    if(AZ.audio==='voiceonly') showFlash('\u00b7','dim-num');     // hide the number \u2014 pure mental image
+    else showFlash((sign?sign:'')+txt, AZ.style==='roman'?'roman':null);
     if(AZ.beads) renderAbacus(Math.max(0,run));
     await wait(onTime);
+    if(myGen!==flashGen) return;
     fnum.classList.add('dim');                 // blank between flashes
     await wait(gap);
+    if(myGen!==flashGen) return;
   }
 
   AZ.state='answering';
@@ -754,7 +910,7 @@ async function runDrill(){
 
 function judge(){
   if(AZ.state!=='answering') return;
-  const guess=parseInt(ansField.value.replace(/[^\d]/g,''),10);
+  const raw=ansField.value.replace(/[^\d]/g,'');const guess=raw===''?0:parseInt(raw,10);
   const ok = guess===AZ.total;
   AZ.state='result';
   ansField.classList.add('hidden'); checkBtn.classList.add('hidden');
@@ -770,6 +926,7 @@ function judge(){
   streakEl.textContent=AZ.streak; bestEl.textContent=AZ.best;
   setValue(Math.max(0,AZ.total),'anzan');   // reveal full answer in the converter above
   nextBtn.classList.remove('hidden'); nextBtn.focus();
+  onFlashResult(ok);                         // adaptive pace + level (Phase 4/5)
 }
 
 function resetDrill(){
@@ -803,14 +960,15 @@ function buildMini(){
     const mk=(cy,t,type,slot)=>{
       const g=el('g',{class:'mbead',transform:`translate(${cx},${cy})`,tabindex:0,role:'button'});
       g.setAttribute('aria-label',(type==='heaven'?'five-bead':'one-bead')+', '+(rod?'tens':'units')+' rod');
-      g.appendChild(el('path',{class:'body',d:mPath(),fill:'var(--bone)',stroke:'#6b3f23','stroke-width':1.3}));
+      const body=el('path',{class:'body',d:mPath(),fill:'var(--bone)',stroke:'#6b3f23','stroke-width':1.3});
+      g.appendChild(body);
       const ov=el('line',{x1:-7,y1:-6,x2:7,y2:-6,stroke:'transparent','stroke-width':1.4});
       const tx=el('text',{x:0,y:0,'font-size':12,fill:'#2a2014','text-anchor':'middle','dominant-baseline':'central','font-family':'Georgia,serif','font-weight':'700'});
       tx.textContent=t.ch; g.appendChild(ov); g.appendChild(tx); s.appendChild(g);
       const act=()=>onMiniBead(rod,type,slot);
       g.addEventListener('click',act);
       g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();act();}});
-      return {g,glyph:tx,ovr:ov,bars:t.bars};
+      return {g,body,glyph:tx,ovr:ov,bars:t.bars};
     };
     const ref={heaven:mk(M_HV_REST,five,'heaven',0),earth:[]};
     for(let k=0;k<4;k++) ref.earth.push(mk(M_DOWN[k],one,'earth',k));
@@ -834,9 +992,8 @@ function buildMini(){
   }
 }
 function mAct(b,on){
-  const body=b.g.querySelector('.body');
-  body.setAttribute('fill',on?'var(--cinnabar)':'var(--bone)');
-  body.setAttribute('stroke',on?'var(--cinnabar-dk)':'#6b3f23');
+  b.body.setAttribute('fill',on?'var(--cinnabar)':'var(--bone)');
+  b.body.setAttribute('stroke',on?'var(--cinnabar-dk)':'#6b3f23');
   b.glyph.setAttribute('fill',on?'var(--bone)':'#2a2014');
   if(b.bars)b.ovr.setAttribute('stroke',on?'var(--bone)':'#2a2014');
 }
@@ -854,12 +1011,6 @@ function renderMini(v){
     ref.romanTxt.textContent=d===0?'':rodRoman(i,d);
   }
 }
-function flashRod(i){
-  const ref=MINI.refs[i], all=[ref.heaven,...ref.earth];
-  all.forEach(b=>{ const body=b.g.querySelector('.body'); body.setAttribute('stroke','#e7b04a'); body.setAttribute('stroke-width','3'); });
-  setTimeout(()=>all.forEach(b=>{ const body=b.g.querySelector('.body'); body.setAttribute('stroke-width','1.3'); renderMini(demoVal); }),600);
-}
-
 // -- chisanbop hands --
 const HANDS={el:document.getElementById('hands'),units:null,tens:null};
 function buildHand(cx, side, rod){       // side: 'units' | 'tens'
@@ -919,87 +1070,427 @@ function renderHand(hand,digit){
 function renderDemo(v){ renderMini(v); renderHand(HANDS.units,v%10); renderHand(HANDS.tens,Math.floor(v/10)%10); }
 
 // -- state + direct interaction --
-let demoVal=3, demoBusy=false;
-const cap=document.getElementById('demoCap'), movesEl=document.getElementById('demoMoves'), dValEl=document.getElementById('dVal');
-const longBtn=document.getElementById('longBtn'), shortBtn=document.getElementById('shortBtn'),
-      dPlus=document.getElementById('dPlus'), dMinus=document.getElementById('dMinus'), demoReset=document.getElementById('demoReset');
-const REDUCE2=matchMedia('(prefers-reduced-motion:reduce)').matches;
-const wait=ms=>new Promise(r=>setTimeout(r,REDUCE2?Math.min(ms,180):ms));
-const rom=v=>tokStr(subTokens(v));
-const lockDemo=l=>{demoBusy=l;[longBtn,shortBtn,dPlus,dMinus,demoReset].forEach(b=>b.disabled=l);};
-
+let demoVal=3;
 const digitsOf=()=>[demoVal%10, Math.floor(demoVal/10)%10];   // [units, tens]
-function setDemo(v){ demoVal=Math.max(0,Math.min(99,v)); dValEl.textContent=demoVal%10; renderDemo(demoVal); exploreCap(demoVal); }
+function setDemo(v){ demoVal=Math.max(0,Math.min(99,v)); renderDemo(demoVal); }
 function setRodDigit(rod,d){ const ds=digitsOf(); ds[rod]=d; setDemo(ds[0]+ds[1]*10); }
 
-function onMiniBead(rod,type,slot){ if(demoBusy)return; let d=digitsOf()[rod];
+function onMiniBead(rod,type,slot){ let d=digitsOf()[rod];
   if(type==='heaven'){ d=d>=5?d-5:d+5; }
-  else { const e=d%5, base=d>=5?5:0, ne=(slot+1)<=e?slot:slot+1; d=base+ne; }
+  else { d=earthClick(d,slot); }
   setRodDigit(rod,d);
 }
-function onFinger(rod,idx){ if(demoBusy)return; let d=digitsOf()[rod];
-  const e=d%5, base=d>=5?5:0, ne=(idx+1)<=e?idx:idx+1; setRodDigit(rod,base+ne);
-}
-function onThumb(rod){ if(demoBusy)return; let d=digitsOf()[rod]; setRodDigit(rod, d>=5?d-5:d+5); }
+function onFinger(rod,idx){ setRodDigit(rod,earthClick(digitsOf()[rod],idx)); }
+function onThumb(rod){ let d=digitsOf()[rod]; setRodDigit(rod, d>=5?d-5:d+5); }
 
-function exploreCap(v){
-  const u=v%10;
-  if(u===9){
-    cap.innerHTML=`Units read <b>VIIII</b> — full. A single rod stops at nine, so the only way up is to carry a ten and drop one back: the <b>IX</b> move. Try it by hand — raise a tens bead, lower a unit.`;
+/* ===== trainer: mode router · adaptive level · persistence =====
+   The whole trainer hangs off one Trainer object and four Abacus.* calls.
+   Modes are states on the one shared surface, not separate pages. */
+const MODES=['sandbox','read','set','complement','flash'];
+const MODE_LABEL={sandbox:'Sandbox',read:'Read',set:'Set',complement:'Complements',flash:'Flash'};
+const MODE_EYEBROW={
+  read:'Read · name the value on the beads',
+  set:'Set · build the value on the beads',
+  complement:'Complements · the friend that completes 5 or 10'
+};
+const STORE_KEY='soroban-trainer-v1';
+const WINDOW_MAX=12;                 // rolling accuracy window (Phase 5)
+const RUNGS=['letters','beads','faded','ghost','gone'];   // ladder labels, one per level 0..4
+
+const Trainer={
+  mode:'sandbox',
+  level:0,
+  adaptive:true,
+  window:[],                         // recent graded results (bool), capped at WINDOW_MAX
+  best:{read:0,set:0,complement:0,flash:0},   // best streak per mode
+  pace:800,                          // flash pace ms (persisted, nudged adaptively)
+  compBest:0                         // complement best median ms (0 = none yet)
+};
+let drillStreak=0;                   // current-session streak (not persisted)
+let activeDrillCleanup=null;         // teardown for whichever drill owns timers/listeners
+
+/* ---- persistence: one versioned key, migration-guarded ---- */
+function loadState(){
+  let s; try{ s=JSON.parse(localStorage.getItem(STORE_KEY)||'null'); }catch(e){ s=null; }
+  if(!s || s.v!==1) return;          // unknown/absent schema → start fresh (migration guard)
+  if(MODES.includes(s.mode)) Trainer.mode=s.mode;
+  if(typeof s.level==='number') Trainer.level=Math.max(0,Math.min(4,s.level|0));
+  if(typeof s.adaptive==='boolean') Trainer.adaptive=s.adaptive;
+  if(Array.isArray(s.window)) Trainer.window=s.window.slice(-WINDOW_MAX).map(Boolean);
+  if(s.best && typeof s.best==='object') Object.assign(Trainer.best,s.best);
+  if(typeof s.pace==='number') Trainer.pace=s.pace;
+  if(typeof s.compBest==='number') Trainer.compBest=s.compBest;
+}
+function saveState(){
+  try{
+    localStorage.setItem(STORE_KEY, JSON.stringify({
+      v:1, mode:Trainer.mode, level:Trainer.level, adaptive:Trainer.adaptive,
+      window:Trainer.window.slice(-WINDOW_MAX), best:Trainer.best,
+      pace:Trainer.pace, compBest:Trainer.compBest
+    }));
+  }catch(e){ /* storage unavailable / full — non-fatal, trainer still runs in-session */ }
+}
+
+/* ---- abstraction level + ladder ---- */
+function setLevel(n,opts){
+  n=Math.max(0,Math.min(4,n|0));
+  const changed=n!==Trainer.level;
+  Trainer.level=n;
+  Abacus.level(n);
+  renderLadder();
+  if(Trainer.mode==='flash') bindFlashToLevel();   // re-derive terms/digits/training-wheels
+  saveState();
+  if(changed && opts && opts.toast) flashToast(opts.toast);
+  return changed;
+}
+function renderLadder(){
+  const host=document.getElementById('ladder');
+  host.textContent='';
+  RUNGS.forEach((label,i)=>{
+    if(i){ const a=document.createElement('span'); a.className='arr'; a.textContent='→'; host.appendChild(a); }
+    const r=document.createElement('button'); r.type='button';
+    r.className='rung'+(i===Trainer.level?' lit':(i<Trainer.level?' done':''));
+    r.setAttribute('aria-pressed',String(i===Trainer.level));
+    r.setAttribute('aria-label',`Set level ${i}: ${label}`);
+    const d=document.createElement('span'); d.className='dot';
+    const t=document.createElement('span'); t.textContent=label;
+    r.appendChild(d); r.appendChild(t);
+    r.addEventListener('click',()=>{                 // manual override: pick a rung → adaptive off
+      Trainer.adaptive=false;
+      setLevel(i);                                   // re-renders the ladder + auto button
+    });
+    host.appendChild(r);
+  });
+  // auto / manual toggle — the dial defaults to adaptive; this is the manual escape hatch
+  const auto=document.createElement('button'); auto.type='button'; auto.id='autoBtn';
+  auto.className='autobtn'+(Trainer.adaptive?' on':'');
+  auto.textContent=Trainer.adaptive?'auto':'manual';
+  auto.title='Adaptive fade '+(Trainer.adaptive?'on — accuracy peels the scaffold':'off — pick a rung yourself');
+  auto.setAttribute('aria-pressed',String(Trainer.adaptive));
+  auto.addEventListener('click',()=>{ Trainer.adaptive=!Trainer.adaptive; saveState(); renderLadder(); });
+  host.appendChild(auto);
+}
+let toastTimer=null;
+function flashToast(msg){
+  let el=document.getElementById('levelToast');
+  if(!el){ el=document.createElement('div'); el.id='levelToast'; el.className='toast'; document.body.appendChild(el); }
+  el.textContent=msg; el.classList.add('show');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>el.classList.remove('show'),2200);
+}
+
+/* ---- adaptive fade (Phase 5): rolling window drives level with hysteresis ---- */
+const ADVANCE_AT=0.85, DEMOTE_AT=0.45;   // advance threshold higher than demote → no yo-yo
+function accuracy(){ return Trainer.window.length? Trainer.window.filter(Boolean).length/Trainer.window.length : 0; }
+function maybeAdapt(){
+  if(!Trainer.adaptive) return;
+  if(Trainer.window.length<WINDOW_MAX) return;          // need a full window before moving
+  const acc=accuracy();
+  if(acc>=ADVANCE_AT && Trainer.level<4){
+    Trainer.window=[];                                   // reset window after a move so it can't re-trigger
+    setLevel(Trainer.level+1,{toast:'Level up → '+RUNGS[Trainer.level+1]});
+  } else if(acc<=DEMOTE_AT && Trainer.level>0){
+    Trainer.window=[];
+    setLevel(Trainer.level-1,{toast:'Easing back → '+RUNGS[Trainer.level-1]});
+  }
+}
+// Feed the rolling accuracy window (every mode routes results through here).
+function recordResult(ok){
+  Trainer.window.push(!!ok); if(Trainer.window.length>WINDOW_MAX) Trainer.window.shift();
+  saveState();
+  maybeAdapt();
+}
+// Deck drills (Read · Set · Complements): own streak + the shared window.
+function gradeItem(ok){
+  const m=Trainer.mode;
+  if(ok){ drillStreak++; Trainer.best[m]=Math.max(Trainer.best[m]||0,drillStreak); }
+  else drillStreak=0;
+  if(deckStreak) deckStreak.textContent=String(drillStreak);
+  if(deckBest) deckBest.textContent=String(Trainer.best[m]||0);
+  recordResult(ok);
+}
+
+/* ---- deck (Read · Set · Complements) elements + layout ---- */
+const deck=document.getElementById('deck'),
+      deckEyebrow=document.getElementById('deckEyebrow'),
+      deckFlash=document.getElementById('deckFlash'),
+      deckFlashNum=document.getElementById('deckFlashNum'),
+      deckFlashCap=document.getElementById('deckFlashCap'),
+      deckPrompt=document.getElementById('deckPrompt'),
+      deckField=document.getElementById('deckField'),
+      deckCheck=document.getElementById('deckCheck'),
+      deckNext=document.getElementById('deckNext'),
+      deckStreak=document.getElementById('deckStreak'),
+      deckBest=document.getElementById('deckBest'),
+      deckFeedback=document.getElementById('deckFeedback');
+
+function setInstrumentLocked(on){ document.querySelector('.instrument').classList.toggle('locked',!!on); }
+function showDeckLayout(kind){
+  drillStreak=0; deckStreak.textContent='0'; deckBest.textContent=String(Trainer.best[Trainer.mode]||0);
+  deck.classList.remove('win','lose');
+  deckFlash.classList.toggle('hidden', kind!=='complement');
+  deckField.classList.toggle('hidden', kind!=='read');
+  deckCheck.classList.toggle('hidden', kind==='complement');
+  deckCheck.disabled=false;
+  deckNext.classList.add('hidden');
+  deckFeedback.textContent='';
+  deckEyebrow.textContent=MODE_EYEBROW[Trainer.mode]||'';
+}
+
+/* ---- target generator: range scales with level ---- */
+const MAX_BY_LEVEL=[9,99,999,9999,99999];
+function randTarget(){ const hi=MAX_BY_LEVEL[Math.min(4,Trainer.level)]; return 1+Math.floor(Math.random()*hi); }
+
+/* ---- Read drill (Phase 2) ---- */
+let readTarget=0;
+function startRead(){ showDeckLayout('read'); newReadItem(); }
+function newReadItem(){
+  deck.classList.remove('win','lose');
+  readTarget=randTarget();
+  setInstrumentLocked(true);
+  Abacus.show(readTarget);                  // pure view — `value` stays clean
+  deckPrompt.innerHTML='What number is on the soroban?';
+  deckField.value=''; deckField.disabled=false; deckCheck.disabled=false;
+  deckFeedback.textContent='';
+  deckNext.classList.add('hidden');
+  deckField.focus();
+}
+function checkRead(){
+  if(deckCheck.disabled) return;
+  const raw=deckField.value.replace(/[^\d]/g,''); const guess=raw===''?-1:parseInt(raw,10);
+  const ok=guess===readTarget;
+  deck.classList.add(ok?'win':'lose');
+  deckField.disabled=true; deckCheck.disabled=true;
+  const roman=tokStr(subTokens(readTarget));
+  deckFeedback.innerHTML = ok
+    ? `<span class="ok">✓ ${readTarget.toLocaleString('en-US')}</span> &nbsp; <span class="ansRoman">${roman}</span>`
+    : `<span class="no">✗ it was ${readTarget.toLocaleString('en-US')}</span> &nbsp; <span class="ansRoman">${roman}</span>`;
+  deckNext.classList.remove('hidden'); deckNext.focus();
+  gradeItem(ok);
+}
+
+/* ---- Set drill (Phase 2) ---- */
+let setTarget=0;
+function startSet(){ showDeckLayout('set'); newSetItem(); }
+function newSetItem(){
+  deck.classList.remove('win','lose');
+  clearDiff();
+  setTarget=randTarget();
+  setInstrumentLocked(false);
+  Abacus.set(0);
+  deckPrompt.innerHTML=`Build <b>${setTarget.toLocaleString('en-US')}</b> &nbsp; <span class="ansRoman">${tokStr(subTokens(setTarget))}</span>`;
+  deckCheck.disabled=false;
+  deckFeedback.textContent='';
+  deckNext.classList.add('hidden');
+}
+function checkSet(){
+  if(deckCheck.disabled) return;
+  const got=Abacus.get(), ok=got===setTarget;
+  deck.classList.add(ok?'win':'lose');
+  if(ok){
+    clearDiff();
+    deckFeedback.innerHTML=`<span class="ok">✓ exactly ${setTarget.toLocaleString('en-US')}</span>`;
   } else {
-    cap.innerHTML=`Showing <b>${rom(v)}</b> (${v}). Tap beads or fingers on either instrument — they share one number. Then try to add nine to a single column and feel it run out.`;
+    highlightDiff(setTarget);     // outline the rods that are wrong
+    deckFeedback.innerHTML=`<span class="no">✗ you built ${got.toLocaleString('en-US')}, needed ${setTarget.toLocaleString('en-US')}</span>`
+      +` &nbsp; <span class="ansRoman">${tokStr(subTokens(setTarget))}</span>`;
   }
-  movesEl.textContent='';
+  deckCheck.disabled=true;
+  deckNext.classList.remove('hidden'); deckNext.focus();
+  gradeItem(ok);
+}
+// per-rod diff: mark each rod whose built digit differs from the target's
+function highlightDiff(target){
+  const tr=valueToRods(target), gr=valueToRods(Abacus.get());
+  for(let i=0;i<RODS;i++){
+    const diff=tr[i]!==gr[i], ref=beadRefs[i];
+    ref.heaven.g.classList.toggle('diff',diff);
+    ref.earth.forEach(e=>e.g.classList.toggle('diff',diff));
+  }
+}
+function clearDiff(){
+  for(const ref of beadRefs){
+    ref.heaven.g.classList.remove('diff');
+    ref.earth.forEach(e=>e.g.classList.remove('diff'));
+  }
 }
 
-// -- guided demonstrations (act on whatever is currently shown) --
-async function longWay(){
-  if(demoBusy) return; lockDemo(true);
-  cap.innerHTML=`The long way: pile nine onto the units rod as V + I + I + I + I…`; movesEl.textContent='';
-  await wait(650);
-  const incs=[5,1,1,1,1]; let moves=0;
-  for(const inc of incs){
-    if(demoVal%10 + inc <= 9){
-      demoVal+=inc; dValEl.textContent=demoVal%10; renderDemo(demoVal);
-      cap.innerHTML=`+${rom(inc)} → <b>${rom(demoVal)}</b>. Units rod now holds ${demoVal%10}.`;
-      movesEl.textContent=`${moves+1} bead move${moves?'s':''} so far`; moves++;
-      await wait(620);
-    } else {
-      flashRod(0);
-      cap.innerHTML=`<span class="stuck">Stuck.</span> The rod is full at <b>VIIII</b> — nine is all one column holds. No bead remains for the +${rom(inc)}, so you're forced onto the tens column. Adding nine to a nonzero digit <em>always</em> ends here.`;
-      movesEl.textContent=`${moves} move${moves===1?'':'s'} in — it cannot finish on one rod`;
-      lockDemo(false); return;
-    }
-  }
-  lockDemo(false);
+/* ---- Complement drill (Phase 3) ----
+   Flash one digit; the player presses the single digit that completes it to 5 or
+   10. Auto-advances on the keystroke (no Enter). Tracks median response time and
+   persists a personal best. On a miss the answer's bead structure is shown — the
+   Roman cameo earns its place here: VI is literally V + I on the rod. */
+const comp={type:'mixed', base:10, d:0, ans:0, curType:'ten', t0:0,
+            times:[], awaiting:false, advTimer:null, keyHandler:null};
+const median=a=>{ if(!a.length) return 0; const s=[...a].sort((x,y)=>x-y); const m=s.length>>1;
+  return s.length%2 ? s[m] : (s[m-1]+s[m])/2; };
+
+function buildCompTypeSeg(){
+  const host=document.getElementById('compTypeSeg');
+  [['Friend of 5','five'],['Friend of 10','ten'],['Mixed','mixed']].forEach(([label,val])=>{
+    const b=document.createElement('button'); b.type='button'; b.textContent=label; b.dataset.val=val;
+    b.setAttribute('aria-pressed',String(comp.type===val));
+    b.addEventListener('click',()=>{
+      comp.type=val;
+      host.querySelectorAll('button').forEach(c=>c.setAttribute('aria-pressed','false'));
+      b.setAttribute('aria-pressed','true');
+      comp.times=[];                          // stats restart when the drill changes shape
+      if(Trainer.mode==='complement') newCompItem();
+    });
+    host.appendChild(b);
+  });
 }
 
-async function shortWay(){
-  if(demoBusy) return; const start=demoVal;
-  if(start+9>99){
-    cap.innerHTML=`Two rods stop at <b>XCIX</b> (99). Add nine here and you'd overflow into a third column — the same lesson, one storey up.`;
-    movesEl.textContent=''; return;
+function startComplement(){
+  showDeckLayout('complement');
+  document.getElementById('compTypeWrap').classList.remove('hidden');
+  comp.times=[]; comp.awaiting=false;
+  setInstrumentLocked(true);
+  comp.keyHandler=e=>onCompKey(e);
+  document.addEventListener('keydown',comp.keyHandler);
+  updateCompStats(0);
+  newCompItem();
+}
+function stopComplement(){
+  if(comp.keyHandler){ document.removeEventListener('keydown',comp.keyHandler); comp.keyHandler=null; }
+  clearTimeout(comp.advTimer); comp.advTimer=null; comp.awaiting=false;
+  const w=document.getElementById('compTypeWrap'); if(w) w.classList.add('hidden');
+}
+function newCompItem(){
+  clearTimeout(comp.advTimer);
+  deck.classList.remove('win','lose');
+  const t = comp.type==='mixed' ? (Math.random()<0.5?'five':'ten') : comp.type;
+  comp.curType=t;
+  if(t==='five'){ comp.base=5; comp.d=1+Math.floor(Math.random()*4); }   // d ∈ 1..4
+  else          { comp.base=10; comp.d=1+Math.floor(Math.random()*9); }  // d ∈ 1..9
+  comp.ans=comp.base-comp.d;
+  deckFlashNum.className='deckflashnum'; deckFlashNum.textContent=String(comp.d);
+  deckFlashCap.textContent = t==='five' ? 'friend of five' : 'friend of ten';
+  deckPrompt.innerHTML=`Press the digit that makes <b>${comp.base}</b>`;
+  deckFeedback.textContent='';
+  Abacus.show(0);
+  comp.awaiting=true;
+  comp.t0=Date.now();
+}
+function onCompKey(e){
+  if(!comp.awaiting) return;
+  if(!/^[0-9]$/.test(e.key)) return;
+  e.preventDefault();
+  comp.awaiting=false;
+  const guess=+e.key, ok=guess===comp.ans, dt=Date.now()-comp.t0;
+  if(ok) comp.times.push(dt);
+  deck.classList.add(ok?'win':'lose');
+  if(ok){
+    deckFeedback.innerHTML=`<span class="ok">✓ ${comp.d} + ${comp.ans} = ${comp.base}</span>`
+      +` &nbsp; <span class="muted">${Math.round(dt)} ms</span>`;
+  } else {
+    Abacus.show(comp.ans);                   // show the answer's beads: its V+I structure
+    deckFeedback.innerHTML=`<span class="no">✗ ${comp.ans}</span> — ${comp.d} + <b>${comp.ans}</b> = ${comp.base}`
+      +` &nbsp; <span class="ansRoman">${tokStr(subTokens(comp.ans))}</span>`;
   }
-  lockDemo(true);
-  cap.innerHTML=`The short way: nine is one short of ten — add a ten, give one back.`; movesEl.textContent='';
-  await wait(650);
-  demoVal+=10; dValEl.textContent=demoVal%10; renderDemo(demoVal);
-  cap.innerHTML=`<b>+X</b> — carry one ten (the tens rod, the left hand's finger).`;
-  movesEl.textContent='1 move'; await wait(780);
-  demoVal-=1; dValEl.textContent=demoVal%10; renderDemo(demoVal);
-  cap.innerHTML=`<b>&minus;I</b> — take one unit back. You land on <b>${rom(demoVal)}</b> (${demoVal}).`;
-  movesEl.textContent='2 moves — and this works from any starting digit'; await wait(880);
-  cap.innerHTML=`${start} + 9 = ${start} + <b>X</b> &minus; <b>I</b>. That is exactly what <b>IX</b> records: the easy move, frozen into the numeral.`;
-  lockDemo(false);
+  const med=median(comp.times);
+  if(ok && comp.times.length>=5 && (!Trainer.compBest || med<Trainer.compBest)){
+    Trainer.compBest=Math.round(med); saveState();
+  }
+  updateCompStats(med);
+  gradeItem(ok);
+  comp.advTimer=setTimeout(newCompItem, ok?700:1500);
+}
+function updateCompStats(med){
+  const best=Trainer.compBest?Trainer.compBest+' ms':'—';
+  deckEyebrow.textContent=`Complements · median ${med?Math.round(med)+' ms':'—'} · best ${best}`;
 }
 
-// -- units stepper (synced with beads) --
-const nudge=delta=>{ if(demoBusy)return; const u=digitsOf()[0]; setRodDigit(0,Math.max(0,Math.min(9,u+delta))); };
-dPlus.addEventListener('click',()=>nudge(1));
-dMinus.addEventListener('click',()=>nudge(-1));
-longBtn.addEventListener('click',longWay);
-shortBtn.addEventListener('click',shortWay);
-demoReset.addEventListener('click',()=>{ if(!demoBusy) setDemo(0); });
+/* ---- Flash mode (Phase 4): level drives difficulty + training wheels;
+        results nudge pace and feed the adaptive window ---- */
+const PACE_MIN=260, PACE_MAX=1300;
+const FLASH_BY_LEVEL=[
+  {terms:3, digits:1, beads:true},     // L0 letters — gentle, full training wheels
+  {terms:5, digits:1, beads:true},     // L1 beads
+  {terms:5, digits:2, beads:true},     // L2 faded
+  {terms:10,digits:2, beads:true},     // L3 ghost
+  {terms:10,digits:3, beads:false}     // L4 gone — no beads, pure anzan
+];
+function bindFlashToLevel(){
+  const f=FLASH_BY_LEVEL[Math.min(4,Trainer.level)];
+  AZ.terms=f.terms; AZ.digits=f.digits; AZ.beads=f.beads;
+  AZ.pace=Trainer.pace;
+  syncFlashSegs();
+}
+function enterFlash(){
+  setInstrumentLocked(true);
+  resetDrill();
+  bindFlashToLevel();
+}
+function onFlashResult(ok){
+  Trainer.best.flash=Math.max(Trainer.best.flash||0, AZ.best);
+  // win → quicker, miss → slower; bounded. The working pace persists.
+  Trainer.pace = ok ? Math.max(PACE_MIN, Trainer.pace-40)
+                    : Math.min(PACE_MAX, Trainer.pace+80);
+  AZ.pace=Trainer.pace;
+  syncFlashSegs();
+  recordResult(ok);     // feeds the rolling window → may advance/demote level (with toast)
+}
+
+/* ---- sandbox ---- */
+function enterSandbox(){
+  setInstrumentLocked(false);
+  Abacus.readout(true);
+  renderAbacus();
+}
+
+/* ---- mode router ---- */
+function stopAllDrills(){
+  if(activeDrillCleanup){ const c=activeDrillCleanup; activeDrillCleanup=null; c(); }
+  stopComplement();
+  stopFlash();
+  clearDiff();
+}
+function applyMode(){
+  const mode=Trainer.mode;
+  stopAllDrills();
+  document.body.dataset.mode=mode;
+  deck.classList.toggle('hidden', !(mode==='read'||mode==='set'||mode==='complement'));
+  document.querySelector('.anzan').classList.toggle('hidden', mode!=='flash');
+  Abacus.readout(mode==='sandbox');
+  if(mode==='sandbox') enterSandbox();
+  else if(mode==='read') startRead();
+  else if(mode==='set') startSet();
+  else if(mode==='complement') startComplement();
+  else if(mode==='flash') enterFlash();
+}
+function setMode(mode){
+  if(!MODES.includes(mode)) mode='sandbox';
+  Trainer.mode=mode;
+  syncModeSeg();
+  applyMode();
+  saveState();
+}
+function buildModeSeg(){
+  const host=document.getElementById('modeSeg');
+  MODES.forEach(m=>{
+    const b=document.createElement('button'); b.type='button';
+    b.textContent=MODE_LABEL[m]; b.dataset.mode=m;
+    b.setAttribute('aria-pressed',String(Trainer.mode===m));
+    b.addEventListener('click',()=>setMode(m));
+    host.appendChild(b);
+  });
+}
+function syncModeSeg(){
+  document.querySelectorAll('#modeSeg button').forEach(b=>
+    b.setAttribute('aria-pressed',String(b.dataset.mode===Trainer.mode)));
+}
+
+/* ---- deck wiring (shared Check / Next / field) ---- */
+deckCheck.addEventListener('click',()=>{ if(Trainer.mode==='read') checkRead(); else if(Trainer.mode==='set') checkSet(); });
+deckNext.addEventListener('click',()=>{
+  if(Trainer.mode==='read') newReadItem();
+  else if(Trainer.mode==='set') newSetItem();
+  else if(Trainer.mode==='complement') newCompItem();
+});
+deckField.addEventListener('keydown',e=>{
+  if(e.key!=='Enter') return; e.preventDefault();
+  if(deckNext.classList.contains('hidden')) checkRead(); else newReadItem();
+});
 
 /* ===== boot ===== */
 buildAbacus();
@@ -1009,6 +1500,17 @@ buildMini();
 HANDS.units=buildHand(235,'units',0);
 HANDS.tens=buildHand(85,'tens',1);
 setDemo(3);
+
+loadState();
+Speech.init();
+AZ.best=Trainer.best.flash||0; bestEl.textContent=String(AZ.best);   // restore flash best
+AZ.pace=Trainer.pace;
+syncFlashSegs();
+buildModeSeg();
+buildCompTypeSeg();
+renderLadder();
+Abacus.level(Trainer.level);
+setMode(Trainer.mode);
 </script>
 </body>
 </html>
