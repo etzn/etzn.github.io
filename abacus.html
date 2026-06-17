@@ -89,8 +89,7 @@
   /* Set miss: outline the rods that don't match the target (CSS property beats the
      presentation stroke attribute set in setActive). */
   .bead.diff .body{stroke:#e6c46a;stroke-width:3.2;filter:drop-shadow(0 0 4px #e6c46a99)}
-  /* sandbox-only chrome: the manual letter toggle and typing hint fight the dial in drill modes */
-  body:not([data-mode="sandbox"]) #glyphToggle,
+  /* sandbox-only chrome: the typing hint fights the dial in drill modes */
   body:not([data-mode="sandbox"]) #romanHint{display:none}
 
   /* level-change toast */
@@ -118,12 +117,11 @@
   .rorow.arabic .cell{font-family:var(--mono);font-size:clamp(14px,3.0cqw,48px);color:var(--bone)}
   .rorow.roman .cell{font-family:var(--serif);font-size:clamp(15px,3.3cqw,52px);color:var(--brass)}
   /* vinculum (×1000) drawn as a real overline, not a combining char that
-     sits offset/overlapping the letter. .v2 stacks a second bar above. */
-  .rorow.roman .cell .v{display:inline-block;line-height:1;
-    text-decoration:overline;text-decoration-thickness:.05em}
-  .rorow.roman .cell .v2{position:relative}
-  .rorow.roman .cell .v2::before{content:"";position:absolute;left:0;right:0;
-    top:-.17em;border-top:.05em solid currentColor}
+     sits offset/overlapping the letter. .v2 stacks a second bar above.
+     Defined globally so paintRoman() works anywhere, not just in the readout. */
+  .v{display:inline-block;line-height:1;text-decoration:overline;text-decoration-thickness:.05em}
+  .v2{position:relative}
+  .v2::before{content:"";position:absolute;left:0;right:0;top:-.17em;border-top:.05em solid currentColor}
   .cell.dim{opacity:.3}
   .roedit{display:none;position:absolute;inset:0;width:100%;height:100%;border:none;
     background:transparent;outline:none;text-align:center;padding:0;margin:0}
@@ -154,12 +152,9 @@
   #clearBtn{background:var(--cinnabar);color:var(--bone);border-color:var(--cinnabar-dk)}
   #clearBtn:hover{background:var(--cinnabar-dk);border-color:var(--cinnabar-dk)}
 
-  /* ---------- mode bar + abstraction ladder ---------- */
-  .moderow{display:flex;flex-wrap:wrap;gap:14px;align-items:center;
-    margin:clamp(14px,2.5vw,22px) 0 0}
-  .seg.modeSeg{flex:1 1 320px;max-width:560px}
-  .ladder{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;
-    letter-spacing:.12em;text-transform:uppercase;color:#5a4a30;margin-left:auto;user-select:none}
+  /* ---------- abstraction ladder (inside instrument) ---------- */
+  .ladder{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;
+    letter-spacing:.12em;text-transform:uppercase;color:#5a4a30;margin-top:14px;user-select:none}
   .ladder .rung{display:flex;align-items:center;gap:6px;background:none;border:none;
     font:inherit;letter-spacing:inherit;text-transform:inherit;color:inherit;cursor:pointer;
     padding:2px 3px;border-radius:5px;transition:color .3s,opacity .3s}
@@ -178,14 +173,55 @@
   .autobtn.on{color:var(--brass);border-color:var(--brass-dk)}
   .autobtn:hover{color:var(--bone)}
   .autobtn:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
-  @media(max-width:560px){.ladder{display:none}}
+  @media(max-width:560px){.ladder{font-size:9px;gap:4px}}
+  /* ---------- difficulty row (number range, independent of view level) ---------- */
+  .difficulty-row{display:flex;flex-wrap:wrap;align-items:center;gap:4px;font-family:var(--mono);
+    font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#5a4a30;margin-bottom:16px;user-select:none}
+  .difficulty-row .dlabel{color:#5a4a30;margin-right:2px}
+  .difficulty-row .drang{background:none;border:none;font:inherit;letter-spacing:inherit;text-transform:inherit;
+    color:inherit;cursor:pointer;padding:2px 5px;border-radius:5px;transition:color .2s}
+  .difficulty-row .drang:hover{color:var(--bone)}
+  .difficulty-row .drang.lit{color:var(--brass);font-weight:700}
+  .difficulty-row .drang:focus-visible{outline:2px solid var(--brass);outline-offset:1px}
+  .difficulty-row .arr{color:#3a2614;font-size:9px}
 
-  /* ---------- practice deck (Read · Set · Complements) ---------- */
-  .deck{margin-top:clamp(16px,2.5vw,22px);
-    background:linear-gradient(180deg,#241910,#150c06);
-    border:1px solid #0c0805;border-radius:14px;
-    box-shadow:0 26px 60px -34px #000, inset 0 1px 0 #ffffff10;
+  /* ---------- console: mode-tab header + body ---------- */
+  .console{margin:clamp(14px,2.5vw,22px) 0 0}
+  .console .modeSeg{display:flex;border:1px solid #46341f;border-radius:0 0 12px 12px;
+    overflow:hidden;width:100%;border-top:none}
+  .console .modeSeg button{flex:1 1 0;min-width:0;font-family:var(--mono);font-size:11.5px;
+    border:none;background:#1a0f07;color:var(--bone-dim);padding:9px 6px;cursor:pointer;
+    transition:all .15s;white-space:nowrap}
+  .console .modeSeg button+button{border-left:1px solid #46341f}
+  .console .modeSeg button[aria-pressed="true"]{background:var(--cinnabar);color:var(--bone)}
+  .console .modeSeg button:focus-visible{outline:2px solid var(--brass);outline-offset:-2px}
+  .console-body{background:linear-gradient(180deg,#1e1208,#130a04);
+    border:1px solid #0c0805;border-radius:14px 14px 0 0;
+    box-shadow:0 26px 60px -34px #000,inset 0 1px 0 #ffffff08;
     padding:clamp(16px,2.6vw,26px)}
+
+  /* ---------- sandbox: preset row + explainer ---------- */
+  .preset-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+  .preset-row .btn{font-family:var(--mono);font-size:12px;letter-spacing:.04em;
+    border-radius:999px;cursor:pointer;border:1px solid #46341f;
+    background:#ffffff18;color:var(--bone-dim);padding:7px 14px;transition:all .15s}
+  .preset-row .btn:hover{border-color:var(--brass);color:var(--brass)}
+  .preset-row .btn:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+  .explainer{border:1px solid #2e1d0e;border-radius:10px;padding:0}
+  .explainer-summary{list-style:none;font-family:var(--mono);font-size:10.5px;letter-spacing:.2em;
+    text-transform:uppercase;color:var(--brass);cursor:pointer;display:flex;align-items:center;
+    gap:7px;padding:10px 14px;user-select:none}
+  .explainer-summary::-webkit-details-marker{display:none}
+  .explainer-summary .arr{font-size:8px;display:inline-block;transition:transform .18s}
+  .explainer[open] .explainer-summary .arr{transform:rotate(90deg)}
+  .explainer-summary:focus-visible{outline:2px solid var(--brass);outline-offset:2px;border-radius:5px}
+  .explainer-body{padding:0 16px 16px;color:var(--bone-dim);font-size:15px;line-height:1.6}
+  .explainer-body p{margin:10px 0 0}
+  .explainer-body em{font-style:italic;color:var(--bone)}
+  .explainer-body b{font-weight:400;color:var(--bone)}
+
+  /* ---------- practice deck (Read · Set · Complements · Translate) ---------- */
+  .deck{padding:0}
   .deck .eyebrow{margin-bottom:14px}
   .deckflash{height:clamp(120px,22vw,180px);display:flex;flex-direction:column;
     align-items:center;justify-content:center;text-align:center;
@@ -214,15 +250,11 @@
   .deckfeedback .muted{color:#5a4a30}
   .comptype{display:flex;justify-content:center;margin-bottom:16px}
   .comptype .seg{max-width:360px;flex:1 1 auto}
-  .deck.win{box-shadow:0 26px 60px -34px #000, inset 0 0 0 2px #6f8f5e}
-  .deck.lose{box-shadow:0 26px 60px -34px #000, inset 0 0 0 2px var(--cinnabar)}
+  .console-body.win{box-shadow:inset 0 0 0 2px #6f8f5e}
+  .console-body.lose{box-shadow:inset 0 0 0 2px var(--cinnabar)}
 
   /* ---------- anzan drill ---------- */
-  .anzan{margin-top:clamp(16px,2.5vw,22px);
-    background:linear-gradient(180deg,#241910,#150c06);
-    border:1px solid #0c0805;border-radius:14px;
-    box-shadow:0 26px 60px -34px #000, inset 0 1px 0 #ffffff10;
-    padding:clamp(16px,2.6vw,26px)}
+  .anzan{padding:0}
   .anzan .eyebrow{margin-bottom:14px}
   .flashzone{
     height:clamp(150px,28vw,210px);display:flex;flex-direction:column;
@@ -330,13 +362,8 @@
 <div class="wrap">
   <header>
     <h1>The abacus <em>remembers</em> Rome.</h1>
-    <p class="lede">The Japanese soroban abacus reveals the logical structure hidden inside Roman numerals. Each rod contains four unit beads and one five-bead: I&nbsp;and&nbsp;V, X&nbsp;and&nbsp;L, C&nbsp;and&nbsp;D, then the vinculum-marked thousands.</p>
+    <p class="lede">The Japanese <em>soroban</em> abacus reveals the logical structure of Roman numerals. Each rod contains four unit beads and one five-bead: I&nbsp;and&nbsp;V, X&nbsp;and&nbsp;L, C&nbsp;and&nbsp;D, then the vinculum-marked thousands.</p>
   </header>
-
-  <nav class="moderow" aria-label="Practice mode">
-    <span class="seg modeSeg" id="modeSeg" role="group" aria-label="Practice mode"></span>
-    <div class="ladder" id="ladder" role="img" aria-label="Abstraction level"></div>
-  </nav>
 
   <section class="instrument" aria-label="Interactive soroban">
     <div class="frame-wrap">
@@ -346,40 +373,66 @@
         <div class="rorow arabic" id="roArabic" title="Click to type a number"></div>
       </div>
     </div>
-    <p class="hint" id="romanHint">Click a row to type · wrap Roman in [ ] to ×1000 — [V] = 5,000</p>
+    <p class="hint" id="romanHint">Click a row to type · wrap Roman in ( ) to ×1000</p>
     <div class="controls">
       <span class="leg" aria-hidden="true"><i class="sw" style="background:var(--cinnabar)"></i> reckoned</span>
       <span class="leg" aria-hidden="true"><i class="sw" style="background:var(--bone)"></i> at rest</span>
       <span style="margin-left:auto;display:flex;gap:10px;align-items:center">
-        <button class="toggle" id="glyphToggle" aria-pressed="true">Show letters on beads</button>
         <button class="btn" id="clearBtn">Clear</button>
       </span>
     </div>
+    <div class="ladder" id="ladder" role="group" aria-label="View level"></div>
   </section>
 
-  <section class="deck hidden" id="deck" aria-label="Practice drill">
-    <p class="eyebrow" id="deckEyebrow">Read · name the value on the beads</p>
-    <div class="comptype hidden" id="compTypeWrap">
-      <span class="seg" id="compTypeSeg" role="group" aria-label="Complement type"></span>
-    </div>
-    <div class="deckflash hidden" id="deckFlash">
-      <div class="deckflashnum" id="deckFlashNum">0</div>
-      <div class="deckflashcap" id="deckFlashCap"></div>
-    </div>
-    <div class="deckprompt" id="deckPrompt"></div>
-    <div class="deckrow">
-      <input class="deckfield" id="deckField" inputmode="numeric" autocomplete="off" spellcheck="false" aria-label="Your answer" placeholder="?">
-      <button class="go" id="deckCheck">Check</button>
-      <button class="go ghost" id="deckNext">Next</button>
-      <div class="score deckscore">
-        <span>streak <b id="deckStreak">0</b></span>
-        <span>best <b id="deckBest">0</b></span>
+  <section class="console" aria-label="Practice modes">
+    <div class="console-body">
+
+      <div class="difficulty-row hidden" id="difficultyRow" role="group" aria-label="Number range"></div>
+
+      <section id="sandboxPanel" class="hidden" aria-label="Explore">
+        <p class="sub">Select a number by dragging the beads on the soroban, typing a Roman or Arabic number in the fields above, or picking one of these presets:</p>
+        <div class="preset-row">
+          <button class="btn preset" data-value="9">IX</button>
+          <button class="btn preset" data-value="49">XLIX</button>
+          <button class="btn preset" data-value="1984">MCMLXXXIV</button>
+          <button class="btn preset" data-value="2026">MMXXVI</button>
+          <button class="btn preset" data-value="3999">MMMCMXCIX</button>
+          <button class="btn preset" data-value="5000">(V)</button>
+          <button class="btn preset" data-value="12026">(X)MMXXVI</button>
+        </div>
+        <p>The training modes below can help build your skill with the soroban and/or Roman numerals. The pinnacle is <b>anzan</b>, where you visualize the abacus in your head; the view options beneath the soroban let you fade the beads away to strengthen your mental image over time. In Japanese speed competitions, anzan champions can add fifteen three-digit numbers in two seconds.</p>
+        </details>
+      </section>
+
+      <div id="translateTypeWrap" class="comptype hidden">
+        <span class="seg" id="translateTypeSeg" role="group" aria-label="Translation direction"></span>
       </div>
-    </div>
-    <div class="deckfeedback" id="deckFeedback"></div>
-  </section>
 
-  <section class="anzan hidden" aria-label="Flash anzan trainer">
+      <section class="deck hidden" id="deck" aria-label="Practice drill">
+        <p class="eyebrow" id="deckEyebrow">Read · name the value on the beads</p>
+        <div class="comptype hidden" id="compTypeWrap">
+          <span class="seg" id="compTypeSeg" role="group" aria-label="Complement type"></span>
+        </div>
+        <div class="comptype hidden" id="numStyleWrap">
+          <span class="seg" id="numStyleSeg" role="group" aria-label="Numeral style"></span>
+        </div>
+        <div class="deckflash hidden" id="deckFlash">
+          <div class="deckflashnum" id="deckFlashNum">0</div>
+          <div class="deckflashcap" id="deckFlashCap"></div>
+        </div>
+        <div class="deckprompt" id="deckPrompt"></div>
+        <div class="deckrow">
+          <input class="deckfield" id="deckField" inputmode="numeric" autocomplete="off" spellcheck="false" aria-label="Your answer" placeholder="?">
+          <button class="go" id="deckCheck">Check</button>
+          <div class="score deckscore">
+            <span>streak <b id="deckStreak">0</b></span>
+            <span>best <b id="deckBest">0</b></span>
+          </div>
+        </div>
+        <div class="deckfeedback" id="deckFeedback"></div>
+      </section>
+
+      <section class="anzan hidden" aria-label="Flash anzan trainer">
     <p class="eyebrow">Flash anzan · mental soroban practice</p>
     <div class="flashzone" id="flashzone">
       <div class="flashnum" id="flashnum">anzan</div>
@@ -419,16 +472,22 @@
     </div>
   </section>
 
+    </div><!-- .console-body -->
+    <span class="seg modeSeg" id="modeSeg" role="group" aria-label="Practice mode"></span>
+  </section><!-- .console -->
+
   <div class="demo-pair">
     <details class="demo" open>
       <summary class="demo-summary"><span class="arr">&#9658;</span>Why nine is IX, not VIIII</summary>
       <p class="sub">When you add nine to most numbers, there aren’t enough beads to add five and then add four: try it out yourself below. Instead, you have to get there by adding ten and then subtracting one. That’s how the Romans wrote nine: “one before ten”, or IX!</p>
       <svg class="mini" id="mini" viewBox="0 0 240 284" role="img" aria-label="Two-rod soroban"></svg>
-      <p class="sub">Four is IV rather than IIII for the same reason. Can you prove it to yourself?</p>
+      <p class="sub">Four is IV rather than IIII for a similar reason. Can you prove it to yourself?</p>
     </details>
     <details class="demo" open>
+      <p class="sub">Each of our hands can work like a soroban rod: our four fingers representing earth beads, and the thumb as the heaven bead. In the Korean fingermath method <b>chisanbop</b>, you use this logic to count to ninety-nine.</p>
       <summary class="demo-summary"><span class="arr">&#9658;</span>The hand abacus</summary>
       <svg class="handsvg" id="hands" viewBox="0 0 300 222" role="img" aria-label="Two hands counting"></svg>
+      <p class="sub">This kind of counting with a mix of fives and tens is called <b>biquinary counting</b>. Maybe it feels natural because it is already built into our anatomy.</p>
     </details>
   </div>
 </div>
@@ -448,16 +507,16 @@ function addTokens(rods){const out=[];for(let p=RODS-1;p>=0;p--){const d=rods[p]
   for(let i=0;i<h;i++)out.push(f);for(let i=0;i<e;i++)out.push(o);}return out;}
 const BAR=['','\u0305','\u0305\u0305'];
 const tokStr=t=>t.map(x=>x.ch+BAR[x.bars]).join('');
-// Editable/typing form: a vinculum (×1000 per bar) becomes nested [ ] brackets,
-// so V̅̅ M̅ X̅ X̅ VI  ->  [[V]MXX]VI. Round-trips through parseRoman.
+// Editable/typing form: a vinculum (×1000 per bar) becomes nested ( ) parentheses,
+// so V̅̅ M̅ X̅ X̅ VI  ->  ((V)MXX)VI. Round-trips through parseRoman.
 function tokBracket(toks){
   let out='',depth=0;
   for(const x of toks){
-    while(depth<x.bars){out+='[';depth++;}
-    while(depth>x.bars){out+=']';depth--;}
+    while(depth<x.bars){out+='(';depth++;}
+    while(depth>x.bars){out+=')';depth--;}
     out+=x.ch;
   }
-  while(depth>0){out+=']';depth--;}
+  while(depth>0){out+=')';depth--;}
   return out;
 }
 function rodToks(p,d){const[o,f,t]=triad(p);return {0:[],1:[o],2:[o,o],3:[o,o,o],4:[o,f],5:[f],6:[f,o],7:[f,o,o],8:[f,o,o,o],9:[o,t]}[d];}
@@ -478,13 +537,13 @@ function parseRoman(s){
   if(s==='')return 0;
   const vals=[];let mult=1;
   for(const c of s){
-    if(c==='['){mult*=1000;continue;}             // each [ nests another \u00d71000
-    if(c===']'){if(mult===1)return null;mult/=1000;continue;}
+    if(c==='('){mult*=1000;continue;}             // each ( nests another \u00d71000
+    if(c===')'){if(mult===1)return null;mult/=1000;continue;}
     if(c==='\u0305'){if(!vals.length)return null;vals[vals.length-1]*=1000;continue;}
     if(!(c in BASE))return null;
     vals.push(BASE[c]*mult);
   }
-  if(mult!==1)return null;                         // unbalanced [
+  if(mult!==1)return null;                         // unbalanced (
 
   let total=0;
   for(let i=0;i<vals.length;i++){total += (i+1<vals.length && vals[i]<vals[i+1])? -vals[i] : vals[i];}
@@ -562,8 +621,8 @@ function buildAbacus(){
 const VB_X=20, VB_W=520;                 // matches the SVG viewBox origin/width
 const rodPct=i=>((rodX(i)-VB_X)/VB_W)*100;
 const HALFSTEP=(STEP/VB_W)*100/2;        // half the inter-rod gap, in % of width
-const HINT_DEFAULT='Click a row to type · wrap Roman in [ ] to ×1000 — [V] = 5,000';
-const HINT_BAD='Not a numeral I can read — use I V X L C D M, J=I, [ ] for ×1000.';
+const HINT_DEFAULT='Click a row to type · wrap Roman in ( ) to ×1000 — (V) = 5,000';
+const HINT_BAD='Not a numeral I can read — use I V X L C D M, J=I, ( ) for ×1000.';
 const aCells=[], rCells=[];
 let aInput, rInput, aCaret, aPos=0, roArabic, roRoman, roHint, editing=null, editStartValue=0;
 
@@ -611,7 +670,7 @@ function buildReadout(){
     aPos=best; updateCaret();
   });
 
-  // Roman: keeps its power-features ([ ]×1000, vinculum), so it stays a single
+  // Roman: keeps its power-features (( )×1000, vinculum), so it stays a single
   // centred field you commit on blur/Enter.
   rInput=field('Roman numeral'); roRoman.appendChild(rInput);
   rInput.addEventListener('input',()=>{
@@ -727,7 +786,6 @@ const Abacus={
     n=Math.max(0,Math.min(4,n|0));
     abstractionLevel=n;
     showGlyphs=(n===0);
-    glyphBtn.setAttribute('aria-pressed',String(showGlyphs));
     svg.setAttribute('data-abstraction',String(n));
     renderAbacus();
   },
@@ -748,8 +806,6 @@ function onBead(rod,type,slot){
 
 
 /* ===== controls ===== */
-const glyphBtn=document.getElementById('glyphToggle');
-glyphBtn.addEventListener('click',()=>{ showGlyphs=!showGlyphs; glyphBtn.setAttribute('aria-pressed',String(showGlyphs)); renderAbacus(); });
 document.getElementById('clearBtn').addEventListener('click',()=>setValue(0,'clear'));
 
 
@@ -788,7 +844,7 @@ seg('setDigits',[['1',1],['2',2],['3',3]],'digits');
 seg('setPace',[['Slow',1100],['Med',800],['Fast',520],['Blink',300]],'pace',
     v=>{ Trainer.pace=v; saveState(); });   // a manual pace pick also seeds the adaptive pace
 seg('setOps',[['+ only','add'],['+ and \u2212','addsub']],'ops');
-seg('setStyle',[['Arabic','arabic'],['Roman','roman']],'style');
+seg('setStyle',[['Arabic','arabic'],['Roman','roman']],'style', v=>{ Trainer.numStyle=v; saveState(); });
 seg('setBeads',[['Show',true],['Hide',false]],'beads');
 seg('setAudio',[['Off','off'],['Voice','voice'],['Voice only','voiceonly']],'audio');
 
@@ -1086,8 +1142,8 @@ function onThumb(rod){ let d=digitsOf()[rod]; setRodDigit(rod, d>=5?d-5:d+5); }
 /* ===== trainer: mode router · adaptive level · persistence =====
    The whole trainer hangs off one Trainer object and four Abacus.* calls.
    Modes are states on the one shared surface, not separate pages. */
-const MODES=['sandbox','read','set','complement','flash'];
-const MODE_LABEL={sandbox:'Sandbox',read:'Read',set:'Set',complement:'Complements',flash:'Flash'};
+const MODES=['sandbox','read','set','complement','translate','flash'];
+const MODE_LABEL={sandbox:'Sandbox',read:'Read',set:'Set',complement:'Complements',translate:'Translate',flash:'Flash'};
 const MODE_EYEBROW={
   read:'Read · name the value on the beads',
   set:'Set · build the value on the beads',
@@ -1100,11 +1156,13 @@ const RUNGS=['letters','beads','faded','ghost','gone'];   // ladder labels, one 
 const Trainer={
   mode:'sandbox',
   level:0,
+  difficulty:0,
   adaptive:true,
   window:[],                         // recent graded results (bool), capped at WINDOW_MAX
-  best:{read:0,set:0,complement:0,flash:0},   // best streak per mode
+  best:{read:0,set:0,complement:0,translate:0,flash:0},   // best streak per mode
   pace:800,                          // flash pace ms (persisted, nudged adaptively)
-  compBest:0                         // complement best median ms (0 = none yet)
+  compBest:0,                        // complement best median ms (0 = none yet)
+  numStyle:'arabic'                  // 'arabic' | 'roman' — shared across Set, Complement, Flash
 };
 let drillStreak=0;                   // current-session streak (not persisted)
 let activeDrillCleanup=null;         // teardown for whichever drill owns timers/listeners
@@ -1115,18 +1173,20 @@ function loadState(){
   if(!s || s.v!==1) return;          // unknown/absent schema → start fresh (migration guard)
   if(MODES.includes(s.mode)) Trainer.mode=s.mode;
   if(typeof s.level==='number') Trainer.level=Math.max(0,Math.min(4,s.level|0));
+  if(typeof s.difficulty==='number') Trainer.difficulty=Math.max(0,Math.min(4,s.difficulty|0));
   if(typeof s.adaptive==='boolean') Trainer.adaptive=s.adaptive;
   if(Array.isArray(s.window)) Trainer.window=s.window.slice(-WINDOW_MAX).map(Boolean);
   if(s.best && typeof s.best==='object') Object.assign(Trainer.best,s.best);
   if(typeof s.pace==='number') Trainer.pace=s.pace;
   if(typeof s.compBest==='number') Trainer.compBest=s.compBest;
+  if(s.numStyle==='arabic'||s.numStyle==='roman') Trainer.numStyle=s.numStyle;
 }
 function saveState(){
   try{
     localStorage.setItem(STORE_KEY, JSON.stringify({
-      v:1, mode:Trainer.mode, level:Trainer.level, adaptive:Trainer.adaptive,
+      v:1, mode:Trainer.mode, level:Trainer.level, difficulty:Trainer.difficulty, adaptive:Trainer.adaptive,
       window:Trainer.window.slice(-WINDOW_MAX), best:Trainer.best,
-      pace:Trainer.pace, compBest:Trainer.compBest
+      pace:Trainer.pace, compBest:Trainer.compBest, numStyle:Trainer.numStyle
     }));
   }catch(e){ /* storage unavailable / full — non-fatal, trainer still runs in-session */ }
 }
@@ -1146,7 +1206,8 @@ function setLevel(n,opts){
 function renderLadder(){
   const host=document.getElementById('ladder');
   host.textContent='';
-  RUNGS.forEach((label,i)=>{
+  const visibleRungs = Trainer.mode === 'sandbox' ? 2 : RUNGS.length;
+  RUNGS.slice(0, visibleRungs).forEach((label,i)=>{
     if(i){ const a=document.createElement('span'); a.className='arr'; a.textContent='→'; host.appendChild(a); }
     const r=document.createElement('button'); r.type='button';
     r.className='rung'+(i===Trainer.level?' lit':(i<Trainer.level?' done':''));
@@ -1161,15 +1222,43 @@ function renderLadder(){
     });
     host.appendChild(r);
   });
-  // auto / manual toggle — the dial defaults to adaptive; this is the manual escape hatch
-  const auto=document.createElement('button'); auto.type='button'; auto.id='autoBtn';
-  auto.className='autobtn'+(Trainer.adaptive?' on':'');
-  auto.textContent=Trainer.adaptive?'auto':'manual';
-  auto.title='Adaptive fade '+(Trainer.adaptive?'on — accuracy peels the scaffold':'off — pick a rung yourself');
-  auto.setAttribute('aria-pressed',String(Trainer.adaptive));
-  auto.addEventListener('click',()=>{ Trainer.adaptive=!Trainer.adaptive; saveState(); renderLadder(); });
-  host.appendChild(auto);
+  // auto / manual toggle — only meaningful during graded drills, not in sandbox
+  if(Trainer.mode!=='sandbox'){
+    const auto=document.createElement('button'); auto.type='button'; auto.id='autoBtn';
+    auto.className='autobtn'+(Trainer.adaptive?' on':'');
+    auto.textContent=Trainer.adaptive?'auto':'manual';
+    auto.title='Adaptive fade '+(Trainer.adaptive?'on — accuracy peels the scaffold':'off — pick a rung yourself');
+    auto.setAttribute('aria-pressed',String(Trainer.adaptive));
+    auto.addEventListener('click',()=>{ Trainer.adaptive=!Trainer.adaptive; saveState(); renderLadder(); });
+    host.appendChild(auto);
+  }
 }
+/* ---- number range (difficulty) + row ---- */
+const DIFFICULTY_LABELS=['≤ 9','≤ 99','≤ 999','≤ 9k','≤ 99k'];
+function setDifficulty(n){
+  n=Math.max(0,Math.min(4,n|0));
+  Trainer.difficulty=n;
+  renderDifficultyRow();
+  if(Trainer.mode==='flash') bindFlashToLevel();
+  saveState();
+}
+function renderDifficultyRow(){
+  const host=document.getElementById('difficultyRow');
+  host.textContent='';
+  const lbl=document.createElement('span'); lbl.className='dlabel'; lbl.textContent='Range';
+  host.appendChild(lbl);
+  DIFFICULTY_LABELS.forEach((label,i)=>{
+    if(i){ const a=document.createElement('span'); a.className='arr'; a.textContent='→'; host.appendChild(a); }
+    const r=document.createElement('button'); r.type='button';
+    r.className='drang'+(i===Trainer.difficulty?' lit':'');
+    r.setAttribute('aria-pressed',String(i===Trainer.difficulty));
+    r.setAttribute('aria-label','Set range: up to '+[9,99,999,9999,99999][i].toLocaleString('en-US'));
+    r.textContent=label;
+    r.addEventListener('click',()=>setDifficulty(i));
+    host.appendChild(r);
+  });
+}
+
 let toastTimer=null;
 function flashToast(msg){
   let el=document.getElementById('levelToast');
@@ -1218,53 +1307,63 @@ const deck=document.getElementById('deck'),
       deckPrompt=document.getElementById('deckPrompt'),
       deckField=document.getElementById('deckField'),
       deckCheck=document.getElementById('deckCheck'),
-      deckNext=document.getElementById('deckNext'),
       deckStreak=document.getElementById('deckStreak'),
       deckBest=document.getElementById('deckBest'),
       deckFeedback=document.getElementById('deckFeedback');
 
+let deckPhase='check';   // 'check' → button says Check; 'next' → button says Next
+function setDeckPhase(phase){
+  deckPhase=phase;
+  deckCheck.textContent=phase==='next'?'Next':'Check';
+}
 function setInstrumentLocked(on){ document.querySelector('.instrument').classList.toggle('locked',!!on); }
 function showDeckLayout(kind){
   drillStreak=0; deckStreak.textContent='0'; deckBest.textContent=String(Trainer.best[Trainer.mode]||0);
-  deck.classList.remove('win','lose');
+  document.querySelector('.console-body').classList.remove('win','lose');
   deckFlash.classList.toggle('hidden', kind!=='complement');
   deckField.classList.toggle('hidden', kind!=='read');
   deckCheck.classList.toggle('hidden', kind==='complement');
+  document.getElementById('numStyleWrap').classList.toggle('hidden', kind==='read');
   deckCheck.disabled=false;
-  deckNext.classList.add('hidden');
+  setDeckPhase('check');
   deckFeedback.textContent='';
   deckEyebrow.textContent=MODE_EYEBROW[Trainer.mode]||'';
 }
 
 /* ---- target generator: range scales with level ---- */
 const MAX_BY_LEVEL=[9,99,999,9999,99999];
-function randTarget(){ const hi=MAX_BY_LEVEL[Math.min(4,Trainer.level)]; return 1+Math.floor(Math.random()*hi); }
+let lastTarget=0;
+function randTarget(){ const hi=MAX_BY_LEVEL[Math.min(4,Trainer.difficulty)]; let v=1+Math.floor(Math.random()*hi); if(v===lastTarget&&hi>1) v=v%hi+1; return lastTarget=v; }
 
 /* ---- Read drill (Phase 2) ---- */
 let readTarget=0;
 function startRead(){ showDeckLayout('read'); newReadItem(); }
 function newReadItem(){
-  deck.classList.remove('win','lose');
+  document.querySelector('.console-body').classList.remove('win','lose');
   readTarget=randTarget();
   setInstrumentLocked(true);
   Abacus.show(readTarget);                  // pure view — `value` stays clean
   deckPrompt.innerHTML='What number is on the soroban?';
+  deckField.setAttribute('inputmode','text');
   deckField.value=''; deckField.disabled=false; deckCheck.disabled=false;
+  setDeckPhase('check');
   deckFeedback.textContent='';
-  deckNext.classList.add('hidden');
-  deckField.focus();
+  deckField.focus({preventScroll:true});
 }
 function checkRead(){
   if(deckCheck.disabled) return;
-  const raw=deckField.value.replace(/[^\d]/g,''); const guess=raw===''?-1:parseInt(raw,10);
-  const ok=guess===readTarget;
-  deck.classList.add(ok?'win':'lose');
+  const raw=deckField.value.trim();
+  const numStr=raw.replace(/[^\d]/g,'');
+  const asNum=numStr!==''?parseInt(numStr,10):-1;
+  const asRoman=parseRoman(raw);
+  const ok=(asNum===readTarget)||(asRoman===readTarget);
+  document.querySelector('.console-body').classList.add(ok?'win':'lose');
   deckField.disabled=true; deckCheck.disabled=true;
   const roman=tokStr(subTokens(readTarget));
   deckFeedback.innerHTML = ok
     ? `<span class="ok">✓ ${readTarget.toLocaleString('en-US')}</span> &nbsp; <span class="ansRoman">${roman}</span>`
     : `<span class="no">✗ it was ${readTarget.toLocaleString('en-US')}</span> &nbsp; <span class="ansRoman">${roman}</span>`;
-  deckNext.classList.remove('hidden'); deckNext.focus();
+  setDeckPhase('next'); deckCheck.disabled=false; deckCheck.focus({preventScroll:true});
   gradeItem(ok);
 }
 
@@ -1272,20 +1371,25 @@ function checkRead(){
 let setTarget=0;
 function startSet(){ showDeckLayout('set'); newSetItem(); }
 function newSetItem(){
-  deck.classList.remove('win','lose');
+  document.querySelector('.console-body').classList.remove('win','lose');
   clearDiff();
   setTarget=randTarget();
   setInstrumentLocked(false);
   Abacus.set(0);
-  deckPrompt.innerHTML=`Build <b>${setTarget.toLocaleString('en-US')}</b> &nbsp; <span class="ansRoman">${tokStr(subTokens(setTarget))}</span>`;
+  if(Trainer.numStyle==='roman'){
+    deckPrompt.textContent='Build ';
+    const b=document.createElement('b'); paintRoman(b,subTokens(setTarget)); deckPrompt.appendChild(b);
+  } else {
+    deckPrompt.innerHTML=`Build <b>${setTarget.toLocaleString('en-US')}</b>`;
+  }
   deckCheck.disabled=false;
+  setDeckPhase('check');
   deckFeedback.textContent='';
-  deckNext.classList.add('hidden');
 }
 function checkSet(){
   if(deckCheck.disabled) return;
   const got=Abacus.get(), ok=got===setTarget;
-  deck.classList.add(ok?'win':'lose');
+  document.querySelector('.console-body').classList.add(ok?'win':'lose');
   if(ok){
     clearDiff();
     deckFeedback.innerHTML=`<span class="ok">✓ exactly ${setTarget.toLocaleString('en-US')}</span>`;
@@ -1294,8 +1398,7 @@ function checkSet(){
     deckFeedback.innerHTML=`<span class="no">✗ you built ${got.toLocaleString('en-US')}, needed ${setTarget.toLocaleString('en-US')}</span>`
       +` &nbsp; <span class="ansRoman">${tokStr(subTokens(setTarget))}</span>`;
   }
-  deckCheck.disabled=true;
-  deckNext.classList.remove('hidden'); deckNext.focus();
+  setDeckPhase('next'); deckCheck.disabled=false; deckCheck.focus({preventScroll:true});
   gradeItem(ok);
 }
 // per-rod diff: mark each rod whose built digit differs from the target's
@@ -1314,6 +1417,80 @@ function clearDiff(){
   }
 }
 
+/* ---- Translate drill: Arabic↔Roman text translation ---- */
+const translate={dir:'arabic-to-roman', target:0};
+
+function buildTranslateTypeSeg(){
+  const host=document.getElementById('translateTypeSeg');
+  [['Arabic → Roman','arabic-to-roman'],['Roman → Arabic','roman-to-arabic']].forEach(([label,val])=>{
+    const b=document.createElement('button'); b.type='button';
+    b.textContent=label;
+    b.setAttribute('aria-pressed',String(translate.dir===val));
+    b.addEventListener('click',()=>{
+      translate.dir=val;
+      [...host.children].forEach(c=>c.setAttribute('aria-pressed','false'));
+      b.setAttribute('aria-pressed','true');
+      startTranslate();
+    });
+    host.appendChild(b);
+  });
+}
+
+function startTranslate(){
+  const isA2R=translate.dir==='arabic-to-roman';
+  deckEyebrow.textContent=isA2R
+    ? 'Translate · write the Roman numeral for the number shown'
+    : 'Translate · write the number for the Roman numeral shown';
+  // show deckField as text for Roman input, numeric for Arabic input
+  deckField.setAttribute('inputmode', isA2R ? 'text' : 'numeric');
+  showDeckLayout('read');   // reuse 'read' layout: field + Check/Next, instrument locked
+  newTranslateItem();
+}
+
+function newTranslateItem(){
+  document.querySelector('.console-body').classList.remove('win','lose');
+  translate.target=randTarget();
+  setInstrumentLocked(true);
+  const isA2R=translate.dir==='arabic-to-roman';
+  if(isA2R){
+    deckPrompt.innerHTML=`<b>${translate.target.toLocaleString('en-US')}</b>`;
+  } else {
+    deckPrompt.textContent='';
+    const b=document.createElement('b'); paintRoman(b,subTokens(translate.target)); deckPrompt.appendChild(b);
+  }
+  deckField.value=''; deckField.disabled=false; deckCheck.disabled=false;
+  setDeckPhase('check');
+  deckFeedback.textContent='';
+  deckField.focus({preventScroll:true});
+}
+
+function checkTranslate(){
+  if(deckCheck.disabled) return;
+  const isA2R=translate.dir==='arabic-to-roman';
+  const raw=deckField.value.trim();
+  let ok=false;
+  const canonical=tokStr(subTokens(translate.target));
+  if(isA2R){
+    const parsed=parseRoman(raw);
+    ok=(parsed===translate.target);
+    const feedback=ok
+      ? `<span class="ok">✓ ${canonical}</span>`
+      : `<span class="no">✗</span> <span class="ansRoman">${canonical}</span>`;
+    const nonCanonical=(parsed===translate.target && raw.toUpperCase()!==canonical);
+    deckFeedback.innerHTML = feedback + (nonCanonical ? ` <span class="muted">(${raw.toUpperCase()} also works)</span>` : '');
+  } else {
+    const guess=parseInt(raw.replace(/[^\d]/g,''),10);
+    ok=(guess===translate.target);
+    deckFeedback.innerHTML=ok
+      ? `<span class="ok">✓ ${translate.target.toLocaleString('en-US')}</span>`
+      : `<span class="no">✗ it was ${translate.target.toLocaleString('en-US')}</span>`;
+  }
+  document.querySelector('.console-body').classList.add(ok?'win':'lose');
+  deckField.disabled=true;
+  setDeckPhase('next'); deckCheck.disabled=false; deckCheck.focus({preventScroll:true});
+  gradeItem(ok);
+}
+
 /* ---- Complement drill (Phase 3) ----
    Flash one digit; the player presses the single digit that completes it to 5 or
    10. Auto-advances on the keystroke (no Enter). Tracks median response time and
@@ -1323,6 +1500,23 @@ const comp={type:'mixed', base:10, d:0, ans:0, curType:'ten', t0:0,
             times:[], awaiting:false, advTimer:null, keyHandler:null};
 const median=a=>{ if(!a.length) return 0; const s=[...a].sort((x,y)=>x-y); const m=s.length>>1;
   return s.length%2 ? s[m] : (s[m-1]+s[m])/2; };
+
+function buildNumStyleSeg(){
+  const host=document.getElementById('numStyleSeg');
+  [['Arabic','arabic'],['Roman','roman']].forEach(([label,val])=>{
+    const b=document.createElement('button'); b.type='button'; b.textContent=label;
+    b.setAttribute('aria-pressed',String(Trainer.numStyle===val));
+    b.addEventListener('click',()=>{
+      Trainer.numStyle=val;
+      host.querySelectorAll('button').forEach(c=>c.setAttribute('aria-pressed','false'));
+      b.setAttribute('aria-pressed','true');
+      AZ.style=val; syncFlashSegs(); saveState();
+      if(Trainer.mode==='set') newSetItem();
+      else if(Trainer.mode==='complement') newCompItem();
+    });
+    host.appendChild(b);
+  });
+}
 
 function buildCompTypeSeg(){
   const host=document.getElementById('compTypeSeg');
@@ -1357,15 +1551,22 @@ function stopComplement(){
 }
 function newCompItem(){
   clearTimeout(comp.advTimer);
-  deck.classList.remove('win','lose');
+  document.querySelector('.console-body').classList.remove('win','lose');
   const t = comp.type==='mixed' ? (Math.random()<0.5?'five':'ten') : comp.type;
   comp.curType=t;
-  if(t==='five'){ comp.base=5; comp.d=1+Math.floor(Math.random()*4); }   // d ∈ 1..4
-  else          { comp.base=10; comp.d=1+Math.floor(Math.random()*9); }  // d ∈ 1..9
+  if(t==='five'){ comp.base=5; let d=1+Math.floor(Math.random()*4); if(d===comp.d) d=d%4+1; comp.d=d; }   // d ∈ 1..4
+  else          { comp.base=10; let d=1+Math.floor(Math.random()*9); if(d===comp.d) d=d%9+1; comp.d=d; }  // d ∈ 1..9
   comp.ans=comp.base-comp.d;
-  deckFlashNum.className='deckflashnum'; deckFlashNum.textContent=String(comp.d);
+  deckFlashNum.className='deckflashnum'+(Trainer.numStyle==='roman'?' roman':'');
+  if(Trainer.numStyle==='roman'){ deckFlashNum.textContent=''; paintRoman(deckFlashNum,subTokens(comp.d)); }
+  else { deckFlashNum.textContent=String(comp.d); }
   deckFlashCap.textContent = t==='five' ? 'friend of five' : 'friend of ten';
-  deckPrompt.innerHTML=`Press the digit that makes <b>${comp.base}</b>`;
+  if(Trainer.numStyle==='roman'){
+    deckPrompt.textContent='Press the digit that makes ';
+    const b=document.createElement('b'); paintRoman(b,subTokens(comp.base)); deckPrompt.appendChild(b);
+  } else {
+    deckPrompt.innerHTML=`Press the digit that makes <b>${comp.base}</b>`;
+  }
   deckFeedback.textContent='';
   Abacus.show(0);
   comp.awaiting=true;
@@ -1378,14 +1579,15 @@ function onCompKey(e){
   comp.awaiting=false;
   const guess=+e.key, ok=guess===comp.ans, dt=Date.now()-comp.t0;
   if(ok) comp.times.push(dt);
-  deck.classList.add(ok?'win':'lose');
+  document.querySelector('.console-body').classList.add(ok?'win':'lose');
   if(ok){
     deckFeedback.innerHTML=`<span class="ok">✓ ${comp.d} + ${comp.ans} = ${comp.base}</span>`
       +` &nbsp; <span class="muted">${Math.round(dt)} ms</span>`;
   } else {
     Abacus.show(comp.ans);                   // show the answer's beads: its V+I structure
-    deckFeedback.innerHTML=`<span class="no">✗ ${comp.ans}</span> — ${comp.d} + <b>${comp.ans}</b> = ${comp.base}`
-      +` &nbsp; <span class="ansRoman">${tokStr(subTokens(comp.ans))}</span>`;
+    deckFeedback.innerHTML=`<span class="no">✗ ${comp.ans}</span> — ${comp.d} + <b>${comp.ans}</b> = ${comp.base} &nbsp;`;
+    const ro=document.createElement('span'); ro.className='ansRoman';
+    paintRoman(ro,subTokens(comp.ans)); deckFeedback.appendChild(ro);
   }
   const med=median(comp.times);
   if(ok && comp.times.length>=5 && (!Trainer.compBest || med<Trainer.compBest)){
@@ -1412,7 +1614,8 @@ const FLASH_BY_LEVEL=[
 ];
 function bindFlashToLevel(){
   const f=FLASH_BY_LEVEL[Math.min(4,Trainer.level)];
-  AZ.terms=f.terms; AZ.digits=f.digits; AZ.beads=f.beads;
+  AZ.terms=f.terms; AZ.digits=Math.min(3,Trainer.difficulty+1); AZ.beads=f.beads;
+  AZ.style=Trainer.numStyle;
   AZ.pace=Trainer.pace;
   syncFlashSegs();
 }
@@ -1433,9 +1636,18 @@ function onFlashResult(ok){
 
 /* ---- sandbox ---- */
 function enterSandbox(){
+  if(Trainer.level>1) setLevel(1);
   setInstrumentLocked(false);
   Abacus.readout(true);
   renderAbacus();
+  document.getElementById('sandboxPanel').classList.remove('hidden');
+}
+
+/* Wire preset buttons once at boot */
+function wirePresets(){
+  document.querySelectorAll('#sandboxPanel .preset').forEach(btn=>{
+    btn.addEventListener('click',()=>{ setValue(parseInt(btn.dataset.value,10),'preset'); });
+  });
 }
 
 /* ---- mode router ---- */
@@ -1449,13 +1661,18 @@ function applyMode(){
   const mode=Trainer.mode;
   stopAllDrills();
   document.body.dataset.mode=mode;
-  deck.classList.toggle('hidden', !(mode==='read'||mode==='set'||mode==='complement'));
+  renderLadder();
+  document.getElementById('sandboxPanel').classList.toggle('hidden', mode!=='sandbox');
+  document.getElementById('difficultyRow').classList.toggle('hidden', mode==='sandbox');
+  document.getElementById('translateTypeWrap').classList.toggle('hidden', mode!=='translate');
+  deck.classList.toggle('hidden', !(mode==='read'||mode==='set'||mode==='complement'||mode==='translate'));
   document.querySelector('.anzan').classList.toggle('hidden', mode!=='flash');
   Abacus.readout(mode==='sandbox');
   if(mode==='sandbox') enterSandbox();
   else if(mode==='read') startRead();
   else if(mode==='set') startSet();
   else if(mode==='complement') startComplement();
+  else if(mode==='translate') startTranslate();
   else if(mode==='flash') enterFlash();
 }
 function setMode(mode){
@@ -1480,16 +1697,22 @@ function syncModeSeg(){
     b.setAttribute('aria-pressed',String(b.dataset.mode===Trainer.mode)));
 }
 
-/* ---- deck wiring (shared Check / Next / field) ---- */
-deckCheck.addEventListener('click',()=>{ if(Trainer.mode==='read') checkRead(); else if(Trainer.mode==='set') checkSet(); });
-deckNext.addEventListener('click',()=>{
-  if(Trainer.mode==='read') newReadItem();
-  else if(Trainer.mode==='set') newSetItem();
-  else if(Trainer.mode==='complement') newCompItem();
-});
+/* ---- deck wiring (shared Check/Next single button + field) ---- */
+function deckCheckAction(){
+  if(deckPhase==='next'){
+    if(Trainer.mode==='read') newReadItem();
+    else if(Trainer.mode==='set') newSetItem();
+    else if(Trainer.mode==='translate') newTranslateItem();
+  } else {
+    if(Trainer.mode==='read') checkRead();
+    else if(Trainer.mode==='set') checkSet();
+    else if(Trainer.mode==='translate') checkTranslate();
+  }
+}
+deckCheck.addEventListener('click', deckCheckAction);
 deckField.addEventListener('keydown',e=>{
   if(e.key!=='Enter') return; e.preventDefault();
-  if(deckNext.classList.contains('hidden')) checkRead(); else newReadItem();
+  deckCheckAction();
 });
 
 /* ===== boot ===== */
@@ -1505,10 +1728,15 @@ loadState();
 Speech.init();
 AZ.best=Trainer.best.flash||0; bestEl.textContent=String(AZ.best);   // restore flash best
 AZ.pace=Trainer.pace;
+AZ.style=Trainer.numStyle;
 syncFlashSegs();
 buildModeSeg();
+buildNumStyleSeg();
 buildCompTypeSeg();
+buildTranslateTypeSeg();
+wirePresets();
 renderLadder();
+renderDifficultyRow();
 Abacus.level(Trainer.level);
 setMode(Trainer.mode);
 </script>
