@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>PIG IN A POKE — a game of honest commerce</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Pirata+One&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#241505;
+    --parch:#dfb45c;
+    --parch-lite:#ecc97e;
+    --madder:#96261b;
+    --verdi:#41684d;
+    --pigpink:#d98a76;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    background:var(--ink);
+    color:var(--ink);
+    font-family:'IM Fell English',Georgia,serif;
+    display:flex;justify-content:center;align-items:center;
+    overflow:hidden;
+    touch-action:manipulation;
+    user-select:none;-webkit-user-select:none;
+  }
+  #stage{
+    width:min(100vw,480px);
+    height:min(100dvh,860px);
+    background:var(--parch);
+    background-image:
+      repeating-linear-gradient(93deg,transparent 0 7px, rgba(36,21,5,.045) 7px 8px),
+      repeating-linear-gradient(2deg,transparent 0 11px, rgba(36,21,5,.03) 11px 12px);
+    border-left:6px solid var(--ink);border-right:6px solid var(--ink);
+    display:flex;flex-direction:column;
+    position:relative;overflow:hidden;
+  }
+
+  /* ---------- broadside masthead ---------- */
+  header{
+    text-align:center;
+    padding:10px 12px 6px;
+    border-bottom:5px solid var(--ink);
+    position:relative;
+  }
+  header::after{
+    content:"";display:block;height:2px;background:var(--ink);margin-top:3px;
+  }
+  .eyebrow{
+    font-size:11px;letter-spacing:.28em;text-transform:uppercase;
+  }
+  h1{
+    font-family:'Pirata One',cursive;
+    font-size:clamp(38px,11vw,54px);
+    line-height:.95;
+    letter-spacing:.01em;
+    color:var(--madder);
+    text-shadow:2px 2px 0 var(--ink);
+    margin:2px 0;
+  }
+  .rubric{font-style:italic;font-size:13px}
+
+  /* ---------- ledger ---------- */
+  #ledger{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:8px 16px;
+    border-bottom:3px solid var(--ink);
+    font-size:15px;
+  }
+  #florins{font-family:'Pirata One',cursive;font-size:26px;line-height:1}
+  #florins small{font-family:'IM Fell English',serif;font-size:12px;font-style:italic;letter-spacing:.05em}
+  #scandal{display:flex;gap:6px;align-items:center}
+  .scandal-cat{width:30px;height:30px;opacity:.22;transition:opacity .3s, transform .3s}
+  .scandal-cat.lit{opacity:1;transform:rotate(-8deg) scale(1.15)}
+
+  /* ---------- market ---------- */
+  #market{
+    flex:1;
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    grid-template-rows:repeat(3,1fr);
+    gap:4%;
+    padding:6% 7%;
+    align-items:end;
+  }
+  .stall{
+    position:relative;
+    display:flex;justify-content:center;align-items:flex-end;
+    cursor:pointer;
+    min-height:0;
+  }
+  .stall svg{width:100%;height:100%;max-height:150px;overflow:visible}
+
+  .sack{transform-origin:50% 95%}
+  .stall.idle .sack{animation:breathe 2.6s ease-in-out infinite}
+  .stall.wiggle .sack{animation:wiggle .28s ease-in-out infinite}
+  .stall.stuffed .sack{animation:stuff .35s ease-out}
+  @keyframes breathe{0%,100%{transform:scale(1,1)}50%{transform:scale(1.015,.985)}}
+  @keyframes wiggle{0%,100%{transform:rotate(-4deg) scale(1.03,.97)}50%{transform:rotate(4deg) scale(.97,1.03)}}
+  @keyframes stuff{0%{transform:scale(1.25,.75)}60%{transform:scale(.9,1.1)}100%{transform:scale(1,1)}}
+
+  .critter{opacity:0;transform:translateY(14px);transform-origin:50% 100%;transition:opacity .12s,transform .15s}
+  .stall.reveal .critter{opacity:1;transform:translateY(0)}
+  .stall.escaped .critter.cat-head{animation:flee .7s ease-in forwards}
+  @keyframes flee{0%{transform:translateY(0)}30%{transform:translateY(-30px) rotate(-15deg)}100%{transform:translate(-90px,-160px) rotate(-40deg);opacity:0}}
+
+  .pop{
+    position:absolute;left:50%;top:8%;
+    transform:translateX(-50%);
+    font-family:'Pirata One',cursive;
+    font-size:20px;color:var(--madder);
+    pointer-events:none;opacity:0;white-space:nowrap;
+    text-shadow:1px 1px 0 var(--parch-lite);
+  }
+  .pop.go{animation:popup .8s ease-out forwards}
+  @keyframes popup{0%{opacity:0;transform:translate(-50%,6px)}20%{opacity:1}100%{opacity:0;transform:translate(-50%,-26px)}}
+
+  /* ---------- footer motto ---------- */
+  footer{
+    border-top:5px solid var(--ink);
+    text-align:center;padding:7px 10px 10px;
+    font-style:italic;font-size:13px;
+    min-height:38px;
+  }
+
+  /* ---------- overlays ---------- */
+  .overlay{
+    position:absolute;inset:0;z-index:10;
+    background:rgba(36,21,5,.86);
+    display:flex;flex-direction:column;justify-content:center;align-items:center;
+    text-align:center;padding:28px;color:var(--parch-lite);
+    transition:opacity .35s;
+  }
+  .overlay.hidden{opacity:0;pointer-events:none}
+  .overlay h2{
+    font-family:'Pirata One',cursive;
+    font-size:clamp(34px,10vw,52px);
+    color:var(--parch);
+    line-height:1;margin-bottom:14px;
+  }
+  .overlay p{font-size:16px;line-height:1.5;max-width:34ch;margin-bottom:10px}
+  .overlay .proverb{font-style:italic;font-size:14px;opacity:.85}
+  .overlay button{
+    margin-top:22px;
+    font-family:'Pirata One',cursive;font-size:24px;
+    color:var(--parch);background:var(--madder);
+    border:3px solid var(--parch);border-radius:2px;
+    padding:10px 30px;cursor:pointer;
+    box-shadow:4px 4px 0 rgba(0,0,0,.5);
+  }
+  .overlay button:active{transform:translate(2px,2px);box-shadow:2px 2px 0 rgba(0,0,0,.5)}
+  .overlay button:focus-visible{outline:3px dashed var(--parch);outline-offset:3px}
+  #final-score{font-family:'Pirata One',cursive;font-size:30px;color:var(--pigpink)}
+
+  @media (prefers-reduced-motion: reduce){
+    .stall.idle .sack,.stall.wiggle .sack{animation:none}
+    .stall.wiggle .sack{transform:rotate(3deg)}
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <header>
+    <div class="eyebrow">✦ Ye Honeste Merchant ✦</div>
+    <h1>PIG IN A POKE</h1>
+    <div class="rubric">wherein the cat must not get out of the bag</div>
+  </header>
+
+  <div id="ledger">
+    <div id="florins">0 <small>florins</small></div>
+    <div id="scandal" aria-label="scandal meter"></div>
+  </div>
+
+  <div id="market"></div>
+
+  <footer id="motto">Tap a pawing sack to stuff the cat back in. Never strike a pig.</footer>
+
+  <!-- intro -->
+  <div class="overlay" id="intro">
+    <h2>Market Day, 1387</h2>
+    <p>Your pokes hold “pigs.” Most hold cats. Buyers pay well — until a cat gets out of the bag.</p>
+    <p><b>Tap a cat’s paw</b> to stuff it back in and bank the sale.<br><b>Never tap a snout</b> — an oink of protest draws the crowd.</p>
+    <p class="proverb">Three scandals and the mob runs you out of town.</p>
+    <button id="start-btn">Open the Stall</button>
+  </div>
+
+  <!-- game over -->
+  <div class="overlay hidden" id="gameover">
+    <h2 id="go-title">The Cat Is Out of the Bag!</h2>
+    <p id="go-flavor"></p>
+    <p>Ill-gotten gains: <span id="final-score">0</span> florins</p>
+    <p class="proverb" id="go-proverb"></p>
+    <button id="retry-btn">Flee to the Next Town</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- woodcut SVG parts ---------- */
+  const SACK = `
+    <g class="sack">
+      <path d="M28 118 Q22 70 36 52 Q40 44 34 38 L66 38 Q60 44 64 52 Q78 70 72 118 Q50 126 28 118 Z"
+        fill="var(--parch-lite)" stroke="var(--ink)" stroke-width="4" stroke-linejoin="round"/>
+      <path d="M34 38 Q50 46 66 38" fill="none" stroke="var(--ink)" stroke-width="4"/>
+      <path d="M33 62 Q50 68 68 60 M31 82 Q50 88 70 80 M30 100 Q50 106 71 98"
+        fill="none" stroke="var(--ink)" stroke-width="2" opacity=".55"/>
+      <path d="M36 40 L30 30 M64 40 L70 30" stroke="var(--ink)" stroke-width="3" stroke-linecap="round"/>
+    </g>`;
+
+  const CAT_PAW = `
+    <g class="critter cat-paw">
+      <path d="M46 42 Q44 20 50 12 Q58 6 62 14 Q66 24 60 42 Z"
+        fill="var(--ink)" stroke="var(--ink)" stroke-width="3" stroke-linejoin="round"/>
+      <path d="M49 12 L46 4 M54 9 L53 1 M60 11 L63 3" stroke="var(--ink)" stroke-width="3" stroke-linecap="round"/>
+    </g>`;
+
+  const CAT_HEAD = `
+    <g class="critter cat-head">
+      <path d="M36 40 Q34 18 42 14 L46 24 Q52 21 58 24 L62 14 Q70 18 68 40 Q52 48 36 40 Z"
+        fill="var(--ink)" stroke="var(--ink)" stroke-width="3" stroke-linejoin="round"/>
+      <circle cx="46" cy="29" r="2.6" fill="var(--parch-lite)"/>
+      <circle cx="58" cy="29" r="2.6" fill="var(--parch-lite)"/>
+      <path d="M49 36 L55 36 L52 39 Z" fill="var(--pigpink)"/>
+      <path d="M38 33 L26 31 M38 37 L27 38 M66 33 L78 31 M66 37 L77 38"
+        stroke="var(--ink)" stroke-width="2" stroke-linecap="round"/>
+    </g>`;
+
+  const PIG_SNOUT = `
+    <g class="critter pig-snout">
+      <ellipse cx="52" cy="28" rx="15" ry="11" fill="var(--pigpink)" stroke="var(--ink)" stroke-width="4"/>
+      <circle cx="46" cy="28" r="3" fill="var(--ink)"/>
+      <circle cx="58" cy="28" r="3" fill="var(--ink)"/>
+      <path d="M38 20 Q34 12 40 10 M66 20 Q70 12 64 10" fill="none" stroke="var(--ink)" stroke-width="3" stroke-linecap="round"/>
+    </g>`;
+
+  const SCANDAL_ICON = `
+    <svg viewBox="0 0 40 40" class="scandal-cat" aria-hidden="true">
+      <path d="M8 32 Q6 14 12 10 L15 18 Q20 15 25 18 L28 10 Q34 14 32 32 Q20 38 8 32 Z"
+        fill="var(--madder)" stroke="var(--ink)" stroke-width="2"/>
+      <circle cx="15" cy="22" r="2" fill="var(--parch)"/>
+      <circle cx="25" cy="22" r="2" fill="var(--parch)"/>
+    </svg>`;
+
+  /* ---------- state ---------- */
+  const N = 6, MAX_SCANDAL = 3;
+  const market   = document.getElementById('market');
+  const florinsEl= document.getElementById('florins');
+  const scandalEl= document.getElementById('scandal');
+  const motto    = document.getElementById('motto');
+  const intro    = document.getElementById('intro');
+  const gameover = document.getElementById('gameover');
+
+  let stalls = [], florins = 0, scandal = 0, streak = 0;
+  let running = false, spawnTimer = null, difficulty = 0;
+
+  const MOTTOES = [
+    "Caveat emptor, friend. Caveat emptor.",
+    "It squeals like pork if you don’t look too closely.",
+    "Finest bagged livestock this side of the Rhine.",
+    "The abbot bought two last week. No complaints… yet.",
+    "A poke unopened is a poke unproblematic.",
+    "Business is purring along."
+  ];
+  const PROVERBS = [
+    "«Acheter chat en poche» — to buy a cat in a bag (Fr.)",
+    "«Een kat in de zak kopen» — to buy a cat in the sack (Du.)",
+    "«Die Katze im Sack kaufen» — to buy the cat in the sack (Ger.)",
+    "«Kupować kota w worku» — to buy a cat in a sack (Pol.)"
+  ];
+
+  /* ---------- audio (tiny synth mews & oinks) ---------- */
+  let AC = null;
+  function audio(){ if(!AC){ try{ AC = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } return AC; }
+  function tone(type, f0, f1, dur, vol){
+    const ac = audio(); if(!ac) return;
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(f0, ac.currentTime);
+    o.frequency.exponentialRampToValueAtTime(f1, ac.currentTime + dur);
+    g.gain.setValueAtTime(vol, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + dur);
+    o.connect(g); g.connect(ac.destination);
+    o.start(); o.stop(ac.currentTime + dur);
+  }
+  const mew   = () => tone('square',   620, 980, .18, .05);
+  const yowl  = () => { tone('sawtooth', 900, 300, .5, .07); setTimeout(()=>tone('square',700,1100,.25,.05),120); };
+  const oink  = () => { tone('sawtooth', 160, 90, .12, .09); setTimeout(()=>tone('sawtooth',180,100,.12,.09),110); };
+  const clink = () => tone('triangle', 1400, 1600, .09, .06);
+
+  /* ---------- build ---------- */
+  for(let i=0;i<MAX_SCANDAL;i++) scandalEl.insertAdjacentHTML('beforeend', SCANDAL_ICON);
+
+  for(let i=0;i<N;i++){
+    const d = document.createElement('div');
+    d.className = 'stall idle';
+    d.innerHTML = `<svg viewBox="0 0 100 130">${CAT_PAW}${CAT_HEAD}${PIG_SNOUT}${SACK}</svg><span class="pop"></span>`;
+    d.dataset.i = i;
+    d.addEventListener('pointerdown', () => tap(i));
+    market.appendChild(d);
+    stalls.push({el:d, mode:'idle', deadline:0, kind:null});
+  }
+
+  function setCritter(s, kind){
+    s.el.querySelector('.cat-paw').style.display   = kind==='cat' ? '' : 'none';
+    s.el.querySelector('.cat-head').style.display  = kind==='escape' ? '' : 'none';
+    s.el.querySelector('.pig-snout').style.display = kind==='pig' ? '' : 'none';
+  }
+
+  function say(t){ motto.textContent = t; }
+  function popText(s, t){
+    const p = s.el.querySelector('.pop');
+    p.textContent = t; p.classList.remove('go'); void p.offsetWidth; p.classList.add('go');
+  }
+  function renderScore(){
+    florinsEl.innerHTML = `${florins} <small>florins</small>`;
+    [...scandalEl.children].forEach((c,i)=>c.classList.toggle('lit', i<scandal));
+  }
+
+  /* ---------- core loop ---------- */
+  function idleStalls(){ return stalls.filter(s=>s.mode==='idle'); }
+
+  function spawn(){
+    if(!running) return;
+    const pool = idleStalls();
+    if(pool.length){
+      const s = pool[Math.random()*pool.length|0];
+      const isCat = Math.random() < 0.72;
+      s.kind = isCat ? 'cat' : 'pig';
+      s.mode = 'live';
+      setCritter(s, s.kind);
+      s.el.classList.remove('idle','stuffed','escaped');
+      s.el.classList.add('wiggle','reveal');
+      const window_ = Math.max(650, 1900 - difficulty*95);
+      s.deadline = performance.now() + window_;
+      if(isCat){ mew(); }
+    }
+    const gap = Math.max(420, 1250 - difficulty*70);
+    spawnTimer = setTimeout(spawn, gap);
+  }
+
+  function tick(){
+    if(!running) return;
+    const now = performance.now();
+    for(const s of stalls){
+      if(s.mode==='live' && now > s.deadline){
+        if(s.kind==='cat') escape(s);
+        else quietPig(s);
+      }
+    }
+    requestAnimationFrame(tick);
+  }
+
+  function tap(i){
+    if(!running) return;
+    const s = stalls[i];
+    if(s.mode!=='live'){ return; }
+    if(s.kind==='cat'){
+      s.mode='idle'; streak++;
+      const gain = 10 + Math.min(streak,10)*2;
+      florins += gain; difficulty += 0.6;
+      clink();
+      popText(s, `+${gain} sold!`);
+      s.el.classList.remove('wiggle','reveal'); s.el.classList.add('stuffed');
+      setTimeout(()=>{ s.el.classList.remove('stuffed'); s.el.classList.add('idle'); }, 360);
+      if(streak && streak%5===0) say(MOTTOES[Math.random()*MOTTOES.length|0]);
+    } else {
+      // struck a pig
+      streak = 0; oink();
+      popText(s, 'OINK?!');
+      raiseScandal('You struck a pig. The pig objected. Loudly.');
+      settle(s);
+    }
+    renderScore();
+  }
+
+  function escape(s){
+    streak = 0; yowl();
+    s.mode='cooling';
+    setCritter(s,'escape');
+    s.el.classList.remove('wiggle');
+    s.el.classList.add('escaped');
+    popText(s,'MRRROW!');
+    raiseScandal('A cat is out of the bag, in full view of the parish.');
+    setTimeout(()=>settle(s), 750);
+    renderScore();
+  }
+
+  function quietPig(s){
+    // the one honest sale you make all day
+    florins += 4; difficulty += 0.3;
+    popText(s,'+4 (real pig)');
+    settle(s);
+    renderScore();
+  }
+
+  function settle(s){
+    s.mode='idle'; s.kind=null;
+    s.el.classList.remove('wiggle','reveal','escaped');
+    s.el.classList.add('idle');
+  }
+
+  function raiseScandal(msg){
+    scandal++;
+    say(msg);
+    if(scandal>=MAX_SCANDAL) end();
+  }
+
+  /* ---------- start / end ---------- */
+  function start(){
+    florins=0; scandal=0; streak=0; difficulty=0;
+    stalls.forEach(settle);
+    renderScore();
+    say('Tap a cat’s paw to stuff it back in. Never strike a pig.');
+    intro.classList.add('hidden');
+    gameover.classList.add('hidden');
+    running = true;
+    audio();
+    spawn();
+    requestAnimationFrame(tick);
+  }
+
+  function end(){
+    running = false;
+    clearTimeout(spawnTimer);
+    document.getElementById('final-score').textContent = florins;
+    document.getElementById('go-flavor').textContent =
+      florins < 60 ? 'The mob was swift and your purse was light. A poor day for fraud.' :
+      florins < 200 ? 'You escaped over the churchyard wall, coins jingling like accusations.' :
+      'A masterwork of feline commerce. Ballads will slander you for generations.';
+    document.getElementById('go-proverb').textContent = PROVERBS[Math.random()*PROVERBS.length|0];
+    setTimeout(()=>gameover.classList.remove('hidden'), 500);
+  }
+
+  document.getElementById('start-btn').addEventListener('click', start);
+  document.getElementById('retry-btn').addEventListener('click', start);
+})();
+</script>
+</body>
+</html>
