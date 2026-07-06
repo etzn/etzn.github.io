@@ -14,6 +14,8 @@
     --madder:#96261b;
     --verdi:#41684d;
     --pigpink:#d98a76;
+    --cat-off:#c9663f;   /* warm orange paw, near pig-pink */
+    --pig-off:#7a6a52;   /* dun/dark pig snout */
   }
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
   html,body{height:100%}
@@ -256,7 +258,7 @@
   const gameover = document.getElementById('gameover');
 
   let stalls = [], florins = 0, scandal = 0, streak = 0;
-  let running = false, spawnTimer = null, difficulty = 0;
+  let running = false, spawnTimer = null;
 
   const MOTTOES = [
     "Caveat emptor, friend. Caveat emptor.",
@@ -290,7 +292,20 @@
   const mew   = () => tone('square',   620, 980, .18, .05);
   const yowl  = () => { tone('sawtooth', 900, 300, .5, .07); setTimeout(()=>tone('square',700,1100,.25,.05),120); };
   const oink  = () => { tone('sawtooth', 160, 90, .12, .09); setTimeout(()=>tone('sawtooth',180,100,.12,.09),110); };
+
+  // pig spawn oink: a modified misclick oink whose pitch rises toward the mew as p→1
+  function oinkSpawn(p){
+    const lo0 = lerp(160, 620, p), lo1 = lerp(90, 980, p);
+    const hi0 = lerp(180, 700, p), hi1 = lerp(100, 1100, p);
+    tone('sawtooth', lo0, lo1, .12, .09);
+    setTimeout(() => tone('sawtooth', hi0, hi1, .12, .09), 110);
+  }
   const clink = () => tone('triangle', 1400, 1600, .09, .06);
+
+  /* ---------- math helpers ---------- */
+  const clamp01 = x => x < 0 ? 0 : x > 1 ? 1 : x;
+  const ramp = (v, lo, hi) => clamp01((v - lo) / (hi - lo));
+  const lerp = (a, b, t) => a + (b - a) * t;
 
   /* ---------- build ---------- */
   for(let i=0;i<MAX_SCANDAL;i++) scandalEl.insertAdjacentHTML('beforeend', SCANDAL_ICON);
@@ -305,10 +320,19 @@
     stalls.push({el:d, mode:'idle', deadline:0, kind:null});
   }
 
-  function setCritter(s, kind){
+  function setCritter(s, kind, off){
     s.el.querySelector('.cat-paw').style.display   = kind==='cat' ? '' : 'none';
     s.el.querySelector('.cat-head').style.display  = kind==='escape' ? '' : 'none';
     s.el.querySelector('.pig-snout').style.display = kind==='pig' ? '' : 'none';
+    if(kind==='cat'){
+      s.el.querySelectorAll('.cat-paw path').forEach(p=>{
+        p.style.fill   = off ? 'var(--cat-off)' : '';
+        p.style.stroke = off ? 'var(--cat-off)' : '';
+      });
+    }
+    if(kind==='pig'){
+      s.el.querySelector('.pig-snout ellipse').style.fill = off ? 'var(--pig-off)' : '';
+    }
   }
 
   function say(t){ motto.textContent = t; }
@@ -326,20 +350,28 @@
 
   function spawn(){
     if(!running) return;
+    const t = florins / 900;
     const pool = idleStalls();
     if(pool.length){
       const s = pool[Math.random()*pool.length|0];
       const isCat = Math.random() < 0.72;
       s.kind = isCat ? 'cat' : 'pig';
       s.mode = 'live';
-      setCritter(s, s.kind);
+      const colorChance = ramp(florins, 500, 1800) * 0.5;
+      const off = Math.random() < colorChance;
+      setCritter(s, s.kind, off);
       s.el.classList.remove('idle','stuffed','escaped');
       s.el.classList.add('wiggle','reveal');
-      const window_ = Math.max(650, 1900 - difficulty*95);
+      const window_ = 600 + 1300 * Math.exp(-t);
       s.deadline = performance.now() + window_;
-      if(isCat){ mew(); }
+      if(isCat){
+        mew();
+      } else {
+        const oinkChance = ramp(florins, 150, 1200) * 0.65;
+        if(Math.random() < oinkChance) oinkSpawn(ramp(florins, 150, 1500));
+      }
     }
-    const gap = Math.max(420, 1250 - difficulty*70);
+    const gap = 420 + 830 * Math.exp(-t);
     spawnTimer = setTimeout(spawn, gap);
   }
 
@@ -362,7 +394,7 @@
     if(s.kind==='cat'){
       s.mode='idle'; streak++;
       const gain = 10 + Math.min(streak,10)*2;
-      florins += gain; difficulty += 0.6;
+      florins += gain;
       clink();
       popText(s, `+${gain} sold!`);
       s.el.classList.remove('wiggle','reveal'); s.el.classList.add('stuffed');
@@ -392,7 +424,7 @@
 
   function quietPig(s){
     // the one honest sale you make all day
-    florins += 4; difficulty += 0.3;
+    florins += 4;
     popText(s,'+4 (real pig)');
     settle(s);
     renderScore();
@@ -412,7 +444,7 @@
 
   /* ---------- start / end ---------- */
   function start(){
-    florins=0; scandal=0; streak=0; difficulty=0;
+    florins=0; scandal=0; streak=0;
     stalls.forEach(settle);
     renderScore();
     say('Tap a cat’s paw to stuff it back in. Never strike a pig.');
