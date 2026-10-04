@@ -1,0 +1,543 @@
+<title>Chicago Harvest Calendar</title>
+<meta name="description" content="What's in season around Chicago this week, drawn from public-domain USDA pomological watercolors and Vilmorin-Andrieux engravings.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,400;1,500&family=Gentium+Book+Plus:ital,wght@0,400;0,700;1,400&display=swap">
+<style>
+/* Layout: a naturalist's plate book. One sheet of aged paper; each section is a loose collage of cut-out plates
+   resting on a shared baseline, captioned in italic like a herbarium sheet. The plates are multiplied onto paper,
+   which only works on a light ground, so dark mode pins each collage to a lit paper sheet on a dark board. */
+:root{
+  color-scheme:light;
+  --paper:#F2EDE2; --paper-deep:#E8E0CF; --ink:#2A241D; --ink-soft:#6B6254; --rule:#CFC5B1;
+  --oxblood:#8A2E1E; --sage:#55703A; --slate:#4A6275; --ochre:#A97A1C; --sheet:transparent; --noise:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .42 0 0 0 0 .36 0 0 0 0 .26 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)'/%3E%3C/svg%3E"); --chip:var(--paper-deep);
+  --f-display:"Cormorant Garamond", "EB Garamond", Garamond, "Times New Roman", serif;
+  --f-body:"Gentium Book Plus", "Gentium Plus", Georgia, "Times New Roman", serif;
+}
+*{box-sizing:border-box}
+html{background:var(--paper)}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5;
+  background-image:var(--noise)}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:20px;padding-block:40px 72px;display:flex;flex-direction:column;gap:56px}
+h1,h2,h3{font-family:var(--f-display);font-weight:500;margin:0;text-wrap:balance;line-height:1.05}
+h1{font-size:clamp(2.6rem,7vw,4.6rem);font-style:italic;font-weight:400;letter-spacing:-.01em}
+h2{font-size:clamp(1.7rem,3.4vw,2.3rem);font-style:italic;font-weight:400}
+h3{font-size:1.25rem;font-style:italic;font-weight:500}
+p{margin:0}
+.eyebrow{font-variant:small-caps;letter-spacing:.12em;font-size:.95rem;color:var(--ink-soft)}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
+button:focus-visible{outline:1px dashed var(--ink);outline-offset:4px}
+
+/* masthead */
+.mast{display:grid;gap:18px;justify-items:center;text-align:center;padding-bottom:28px;border-bottom:1px solid var(--rule)}
+.mast .date{font-family:var(--f-display);font-size:1.35rem;font-style:italic;color:var(--ink-soft)}
+.controls{display:flex;flex-wrap:wrap;gap:10px 28px;justify-content:center;align-items:center;font-style:italic}
+.controls .nav{display:flex;gap:18px;align-items:center}
+.link{border-bottom:1px solid transparent;padding-bottom:1px;color:var(--ink-soft)}
+.link:hover{color:var(--ink);border-bottom-color:var(--rule)}
+.link[aria-pressed="true"]{color:var(--ink);border-bottom-color:var(--ink)}
+.sep{color:var(--rule)}
+.toggle{display:inline-flex;gap:8px;align-items:center;color:var(--ink-soft)}
+.toggle input{accent-color:var(--ink);width:15px;height:15px;margin:0}
+
+/* region picker */
+.region{position:relative;text-align:center}
+.region summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:8px;border-bottom:1px dotted var(--rule);padding-bottom:1px}
+.region summary::-webkit-details-marker{display:none}
+.region summary::after{content:"";width:5px;height:5px;border-right:1px solid currentColor;border-bottom:1px solid currentColor;transform:rotate(45deg) translateY(-2px);transition:transform .2s}
+.region[open] summary::after{transform:rotate(225deg) translateY(-1px)}
+.region summary:hover{color:var(--ink)}
+.region summary:focus-visible{outline:1px dashed var(--ink);outline-offset:4px}
+.region .menu{position:absolute;left:50%;transform:translateX(-50%);top:calc(100% + 8px);z-index:5;display:flex;flex-direction:column;min-width:min(20rem,90vw);
+  background:var(--paper);border:1px solid var(--rule);box-shadow:0 10px 30px -14px rgba(0,0,0,.45);padding:6px 0}
+.region .menu button{padding:9px 18px;white-space:nowrap;font-style:italic;font-size:1.05rem;color:var(--ink-soft);text-align:center}
+.region .menu button:hover{color:var(--ink);background:var(--paper-deep)}
+.region .menu button[aria-pressed="true"]{color:var(--ink)}
+.region .menu button[aria-pressed="true"]::before{content:"· "}
+.region .menu button[aria-pressed="true"]::after{content:" ·"}
+
+/* settings */
+.settings{width:min(100%,640px);text-align:center;font-style:normal}
+.settings > div{text-align:left}
+.settings summary{list-style:none;cursor:pointer;display:inline-flex;gap:8px;align-items:center;font-style:italic;color:var(--ink-soft);
+  border-bottom:1px solid transparent;margin-inline:auto}
+.settings summary::-webkit-details-marker{display:none}
+.settings summary::after{content:"";width:6px;height:6px;border-right:1px solid currentColor;border-bottom:1px solid currentColor;transform:rotate(45deg) translateY(-2px);transition:transform .2s}
+.settings[open] summary::after{transform:rotate(225deg) translateY(-1px)}
+.settings summary:hover{color:var(--ink)}
+.settings summary:focus-visible{outline:1px dashed var(--ink);outline-offset:4px}
+.settings > div{display:grid;gap:18px;margin-top:16px;padding:20px 22px;border:1px solid var(--rule);background:color-mix(in srgb,var(--paper-deep) 55%,transparent)}
+.srow{display:grid;grid-template-columns:8.5rem 1fr;gap:6px 16px;align-items:baseline}
+.srow > .lab{font-variant:small-caps;letter-spacing:.1em;color:var(--ink-soft);font-size:.92rem}
+.srow .help a{color:inherit}
+.srow .help{grid-column:2;font-size:.86rem;color:var(--ink-soft);font-style:italic;text-wrap:pretty}
+.seg{display:flex;flex-wrap:wrap;gap:4px 18px;font-style:italic}
+.seg button{color:var(--ink-soft);border-bottom:1px solid transparent;padding-bottom:1px}
+.seg button:hover{color:var(--ink)}
+.seg button[aria-pressed="true"]{color:var(--ink);border-bottom-color:var(--ink)}
+.settings .toggle{color:var(--ink);font-style:italic}
+@media (max-width:560px){ .yearwrap .year{grid-template-columns:minmax(118px,8rem) repeat(24,minmax(17px,1fr))} }
+@media (max-width:560px){ .srow{grid-template-columns:1fr} .srow .help{grid-column:1} }
+
+/* sections */
+.section{display:flex;flex-direction:column;gap:18px}
+.shead{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 16px;justify-content:center;text-align:center}
+.shead .count{font-variant:small-caps;letter-spacing:.1em;color:var(--ink-soft);font-size:.9rem}
+.shead .desc{flex-basis:100%;color:var(--ink-soft);font-style:italic;font-size:.95rem}
+.sec-last h2{color:var(--oxblood)}
+.collage{display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-start;gap:26px 34px;padding-block:8px}
+.slot{display:flex;align-items:flex-end;justify-content:center;height:var(--slot)}
+.empty{color:var(--ink-soft);font-style:italic;text-align:center}
+
+/* a plate */
+.plate{display:flex;flex-direction:column;align-items:center;gap:6px;max-width:min(300px,90vw);text-align:center}
+.plate > button{display:flex;flex-direction:column;align-items:center;gap:6px}
+.cut{position:relative;overflow:hidden;height:var(--h);aspect-ratio:var(--ar);max-width:min(300px,86vw);mix-blend-mode:multiply;
+  -webkit-mask-image:linear-gradient(to right,transparent,#000 6%,#000 94%,transparent),linear-gradient(to bottom,transparent,#000 6%,#000 94%,transparent);
+  -webkit-mask-composite:source-in;
+  mask-image:linear-gradient(to right,transparent,#000 6%,#000 94%,transparent),linear-gradient(to bottom,transparent,#000 6%,#000 94%,transparent);
+  mask-composite:intersect;transition:transform .35s ease}
+.cut img{position:absolute;max-width:none;display:block;width:var(--iw);left:var(--il);top:var(--it)}
+.plate > button:hover .cut{transform:translateY(-3px) rotate(-.6deg)}
+.cut.blank{mix-blend-mode:normal;-webkit-mask-image:none;mask-image:none;border:1px dashed var(--rule);border-radius:50%;display:grid;place-items:center;
+  color:var(--ink-soft);font-style:italic;font-size:.85rem}
+.cap{display:flex;flex-direction:column;align-items:center;line-height:1.25}
+.cname{font-style:italic;font-size:1.05rem}
+.latin{font-style:italic;font-size:.82rem;color:var(--ink-soft)}
+.mark{font-variant:small-caps;letter-spacing:.08em;font-size:.82rem;color:var(--ink-soft)}
+.mark.peak{color:var(--sage)} .mark.last{color:var(--oxblood)} .mark.ship{color:var(--slate)}
+.tip{font-size:.88rem;color:var(--ink);max-width:24ch;text-wrap:pretty}
+.plate .tip{display:none;width:0;min-width:100%;max-width:none}
+/* only the image sets a plate's width (with a floor); caption and notes wrap inside it, so opening notes never reflows the row */
+.plate{min-width:158px} .plate > button{width:100%} .cap{width:0;min-width:100%}
+.plate.open .tip, body.tips .plate .tip{display:block}
+.plate .credit{display:none;width:0;min-width:100%;font-size:.76rem;font-style:italic;color:var(--ink-soft);text-wrap:balance}
+.plate .credit a{color:inherit}
+.plate.open .credit{display:block}
+.soon .cut{opacity:.55;filter:grayscale(.5)}
+
+/* year */
+.yearwrap{overflow-x:auto;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+.year{display:grid;grid-template-columns:minmax(170px,13rem) repeat(24,minmax(17px,1fr));min-width:640px;font-size:.88rem}
+.year .mh{grid-column:span 2;font-variant:small-caps;letter-spacing:.08em;color:var(--ink-soft);text-align:center;padding:10px 0 6px;border-left:1px dotted var(--rule)}
+.year .mh:hover,.year .mh.on{color:var(--ink)}
+.year .mh.on{font-weight:700}
+.year .gh span{position:sticky;left:4px}
+.year .corner{position:sticky;left:0;z-index:2;background:var(--paper) var(--noise)}
+.year .gh{grid-column:1/-1;font-family:var(--f-display);font-style:italic;font-size:1.2rem;padding:16px 4px 4px}
+.year .rn{display:flex;align-items:center;gap:8px;padding:2px 6px 2px 0;font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;position:sticky;left:0;background:var(--paper) var(--noise);z-index:1}
+.year .rn .cut{--h:26px;flex:none;max-width:44px}
+.year .rn .cut.blank{width:26px;border-radius:50%;font-size:0}
+.year .c{position:relative;border-left:1px dotted transparent}
+.year .c.m0{border-left-color:var(--rule)}
+.year .c::after{content:"";position:absolute;left:0;right:0;top:50%;height:7px;transform:translateY(-50%)}
+.year .c.fresh::after{background:color-mix(in srgb,var(--k) 38%,transparent)}
+.year .c.peak::after{background:var(--k);height:9px}
+.year .c.storage::after{background:repeating-linear-gradient(90deg,color-mix(in srgb,var(--k) 55%,transparent) 0 2px,transparent 2px 5px)}
+.year .c.now{background:color-mix(in srgb,var(--ochre) 16%,transparent)}
+.k-fruit{--k:var(--oxblood)} .k-veg{--k:var(--sage)} .k-ship{--k:var(--slate)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 22px;justify-content:center;color:var(--ink-soft);font-style:italic;font-size:.9rem}
+.legend i{display:inline-block;width:24px;height:8px;margin-right:6px;vertical-align:1px}
+.legend .fresh{background:color-mix(in srgb,var(--sage) 38%,transparent)}
+.legend .peak{background:var(--sage)}
+.legend .storage{background:repeating-linear-gradient(90deg,color-mix(in srgb,var(--sage) 55%,transparent) 0 2px,transparent 2px 5px)}
+.legend .now{background:color-mix(in srgb,var(--ochre) 30%,transparent);height:14px}
+
+/* notes */
+.notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:24px 40px;border-top:1px solid var(--rule);padding-top:28px}
+.notes div{display:flex;flex-direction:column;gap:6px;min-width:0}
+.notes p{font-size:.93rem;color:var(--ink-soft);max-width:62ch}
+.notes a{color:inherit}
+.notes ul{margin:0;padding-left:1.1em;display:grid;gap:4px;font-size:.93rem;color:var(--ink-soft)}
+.notes li{break-inside:avoid}
+@media (max-width:560px){ .collage{gap:22px 12px} .plate{min-width:calc(33.33% - 10px);max-width:calc(50% - 8px)} .latin{font-size:.75rem} .cname{font-size:.98rem} }
+
+/* dark mode: system default, overridable from Settings (data-mode) and by the host's data-theme */
+@media (prefers-color-scheme:dark){
+:root:not([data-mode="light"]):not([data-theme="light"]){color-scheme:dark;--paper:#1C1A17;--paper-deep:#2A2621;--ink:#ECE5D6;--ink-soft:#AAA08E;--rule:#3C362D;--oxblood:#E3907A;--sage:#A3BE84;--slate:#93B4CC;--ochre:#D9AE52;--sheet:#E6DFCF;--chip:#3A342B;}
+:root:not([data-mode="light"]):not([data-theme="light"]) .collage{--ink:#2A241D;--ink-soft:#6B6254;--rule:#C9BEA8;--oxblood:#8A2E1E;--sage:#55703A;--slate:#4A6275;color:var(--ink);background:var(--sheet);border-radius:2px;padding:30px 22px 26px;box-shadow:0 1px 0 rgba(0,0,0,.4),0 14px 34px -18px rgba(0,0,0,.9)}:root:not([data-mode="light"]):not([data-theme="light"]) .year .rn .cut:not(.blank){mix-blend-mode:normal;background:var(--sheet);border-radius:3px}
+}
+:root[data-theme="dark"]:not([data-mode="light"]){color-scheme:dark;--paper:#1C1A17;--paper-deep:#2A2621;--ink:#ECE5D6;--ink-soft:#AAA08E;--rule:#3C362D;--oxblood:#E3907A;--sage:#A3BE84;--slate:#93B4CC;--ochre:#D9AE52;--sheet:#E6DFCF;--chip:#3A342B;}
+:root[data-theme="dark"]:not([data-mode="light"]) .collage{--ink:#2A241D;--ink-soft:#6B6254;--rule:#C9BEA8;--oxblood:#8A2E1E;--sage:#55703A;--slate:#4A6275;color:var(--ink);background:var(--sheet);border-radius:2px;padding:30px 22px 26px;box-shadow:0 1px 0 rgba(0,0,0,.4),0 14px 34px -18px rgba(0,0,0,.9)}:root[data-theme="dark"]:not([data-mode="light"]) .year .rn .cut:not(.blank){mix-blend-mode:normal;background:var(--sheet);border-radius:3px}
+:root[data-mode="dark"]{color-scheme:dark;--paper:#1C1A17;--paper-deep:#2A2621;--ink:#ECE5D6;--ink-soft:#AAA08E;--rule:#3C362D;--oxblood:#E3907A;--sage:#A3BE84;--slate:#93B4CC;--ochre:#D9AE52;--sheet:#E6DFCF;--chip:#3A342B;}
+:root[data-mode="dark"] .collage{--ink:#2A241D;--ink-soft:#6B6254;--rule:#C9BEA8;--oxblood:#8A2E1E;--sage:#55703A;--slate:#4A6275;color:var(--ink);background:var(--sheet);border-radius:2px;padding:30px 22px 26px;box-shadow:0 1px 0 rgba(0,0,0,.4),0 14px 34px -18px rgba(0,0,0,.9)}:root[data-mode="dark"] .year .rn .cut:not(.blank){mix-blend-mode:normal;background:var(--sheet);border-radius:3px}
+@media (prefers-reduced-motion:reduce){ .cut{transition:none} .plate > button:hover .cut{transform:none} }
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs id="filters"></defs></svg>
+
+<div class="wrap">
+  <header class="mast">
+    <details class="region" id="region">
+      <summary class="eyebrow"><span id="regionName">Chicago &amp; the near Midwest</span></summary>
+      <div class="menu" role="group" aria-label="Region">
+        <button type="button" data-region="chi">Chicago &amp; the near Midwest</button>
+        <button type="button" data-region="fl">Florida</button>
+      </div>
+    </details>
+    <h1>What's in season</h1>
+    <p class="date" id="date"></p>
+    <div class="controls">
+      <div class="nav" role="group" aria-label="Change week">
+        <button class="link" id="prev" type="button">← previous week</button>
+        <button class="link" id="today" type="button">this week</button>
+        <button class="link" id="next" type="button">next week →</button>
+      </div>
+      <span class="sep" aria-hidden="true">·</span>
+      <div class="nav" role="group" aria-label="Show">
+        <button class="link" type="button" data-f="all">everything</button>
+        <button class="link" type="button" data-f="fruit">fruit</button>
+        <button class="link" type="button" data-f="veg">vegetables</button>
+      </div>
+    </div>
+    <details class="settings" id="settings">
+      <summary>Settings</summary>
+      <div>
+        <div class="srow">
+          <span class="lab">Serving tips</span>
+          <label class="toggle" for="tips"><input type="checkbox" id="tips"> Show under every plate</label>
+          <p class="help">Ideas for serving each food safely at your child's age, based on the <a href="https://www.cdc.gov/infant-toddler-nutrition/foods-and-drinks/choking-hazards.html" rel="noopener">CDC's choking-hazard guidance</a>.</p>
+        </div>
+        <div class="srow">
+          <span class="lab" id="agel">Child's age</span>
+          <div class="seg" role="group" aria-labelledby="agel">
+            <button type="button" data-age="0">6–12 months</button>
+            <button type="button" data-age="1">1–2 years</button>
+            <button type="button" data-age="2">2–4 years</button>
+          </div>
+        </div>
+        <div class="srow">
+          <span class="lab" id="model">Appearance</span>
+          <div class="seg" role="group" aria-labelledby="model">
+            <button type="button" data-mode="system">match device</button>
+            <button type="button" data-mode="light">light</button>
+            <button type="button" data-mode="dark">dark</button>
+          </div>
+        </div>
+      </div>
+    </details>
+  </header>
+
+  <main id="board" style="display:flex;flex-direction:column;gap:56px"></main>
+
+  <section class="section" aria-labelledby="yh">
+    <div class="shead"><h2 id="yh">The year at a glance</h2><p class="desc">Tap a month to turn the calendar there.</p></div>
+    <div class="legend"><span><i class="fresh"></i>in season</span><span><i class="peak"></i>at its best</span><span><i class="storage"></i>local, from storage</span><span><i class="now"></i>this week</span></div>
+    <div class="yearwrap"><div class="year" id="year"></div></div>
+  </section>
+
+  <section class="notes" aria-label="Notes">
+    <div>
+      <h3>Serving tips by age</h3>
+      <p>Tips follow the standard choking guidance in the CDC’s <a href="https://www.cdc.gov/infant-toddler-nutrition/foods-and-drinks/choking-hazards.html" rel="noopener"><i>Choking Hazards</i></a> guide for infants and toddlers and the California Department of Public Health’s <a href="https://www.cdph.ca.gov/Programs/CFH/DMCAH/NUPA/Pages/Choking-Prevention-for-Young-Children.aspx" rel="noopener"><i>Choking Prevention for Young Children</i></a>. Pick your child's age under Settings. This is general guidance, not medical advice, and your pediatrician knows your child best.</p>
+    </div>
+    <div>
+      <h3>How good are these dates?</h3>
+      <p id="noteDates">They are typical harvest windows for northern Illinois, southwest Michigan and southern Wisconsin, which is what Chicago markets sell. Weather moves them a week or two either way, and peaks are fuzzier than starts and ends. The market table is the final word.</p>
+    </div>
+    <div>
+      <h3 id="noteOffH">Winter</h3>
+      <p id="noteOff">From about December to April almost nothing grows outdoors here. "From the cellar" means local crops kept in cold storage. "Shipped in" lists produce grown elsewhere during its own peak, when grocery quality and price are best.</p>
+    </div>
+    <div>
+      <h3>About the plates</h3>
+      <p>Every plate comes from two public-domain collections: fruit from the <a href="https://en.wikipedia.org/wiki/Pomological_Watercolor_Collection" rel="noopener">USDA Pomological Watercolor Collection</a> (1886–1942), painted by Deborah Passmore, Amanda Newton, Royal Steadman and their colleagues; vegetables from the engravings in Vilmorin-Andrieux’s <a href="https://commons.wikimedia.org/wiki/Category:Vilmorin-Andrieux,_Les_plantes_potag%C3%A8res_1883" rel="noopener"><i>Les plantes potagères</i></a> (Paris, 1883), tinted here; and a few stragglers from Francisco Manuel Blanco’s <a href="https://en.wikipedia.org/wiki/Manuel_Blanco_Ramos" rel="noopener"><i>Flora de Filipinas</i></a> (1880s) and Descourtilz’s <a href="https://blog.biodiversitylibrary.org/2011/02/book-of-week-masterpiece-in-eight.html" rel="noopener"><i>Flore médicale des Antilles</i></a> (1827).</p>
+    </div>
+  </section>
+</div>
+
+<script>
+const PLATES = {"strawberry": {"u": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/95/Pomological_Watercolor_POM00004860.jpg/1280px-Pomological_Watercolor_POM00004860.jpg", "r": 0.6645, "c": [0.22, 0.2, 0.8, 0.68], "by": "Deborah Griscom Passmore", "d": "1904", "f": "https://commons.wikimedia.org/wiki/File:Pomological_Watercolor_POM00004860.jpg", "p": [254.0, 245.0, 217.0]}, "cherry": {"u": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/81/Marasca-Moscata_cherries_Krieger_in_1933_%28cropped%29.jpg/1280px-Marasca-Moscata_cherries_Krieger_in_1933_%28cropped%29.jpg", "r": 0.7491, "c": [0.08, 0.02, 0.92, 0.96], "by": "Louis Charles Christopher Krieger", "d": "1933", "f": "https://commons.wikimedia.org/wiki/File:Marasca-Moscata_cherries_Krieger_in_1933_%28cropped%29.jpg", "p": [255.0, 240.0, 211.0]}, "blueberry": {"u": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/72/Pomological_Watercolor_POM00006847.jpg/1280px-Pomological_Watercolor_POM00006847.jpg", "r": 0.71, "c": [0.28, 0.28, 0.72, 0.62], "by": "J. Marion Shull", "d": "1940", "f": "https://commons.wikimedia.org/wiki/File:Pomological_Watercolor_POM00006847.jpg", "p": [255.0, 254.0, 234.0]}, "raspberry": {"u": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/Pomological_Watercolor_POM00007347.jpg/1280px-Pomological_Watercolor_POM00007347.jpg", "r": 0.6618, "c": [0.2, 0.12, 0.82, 0.88], "by": "Mary Daisy Arnold", "d": "1913", "f": "https://commons.wikimedia.org/wiki/File:Pomological_Watercolor_POM00007347.jpg", "p": [253.0, 246.0, 226.0]}, "blackberry": {"u": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/42/Pomological_Watercolor_POM00007345.jpg/1280px-Pomological_Watercolor_POM00007345.jpg", "r": 0.6545, "c": [0.1, 0.12, 0.82, 0.8], "by": "Ellen Isham Schutt", "d": "1912", "f": "https://commons.wikimedia.org/wiki/File:Pomological_Watercolor_POM00007345.jpg", "p": [254.0, 247.0, 228.0]}, "peach": {"u": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d3/Pomological_Watercolor_POM00005183.jpg/1280px-Pomological_Watercolor_POM00005183.jpg", "r": 0.6582, "c": [0.25, 0.08, 0.75, 0.79], "by": "Deborah Griscom Passmore", "d": "1905", "f": "https://commons.wikimedia.org/wiki/File:Pomological_Watercolor_POM00005183.jpg", "p": [254.0, 251.0, 232.0]}, "plum": {"u": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Pomological_Watercolor_POM00004755.jpg/1280px-Pomological_Watercolor_POM00004755.jpg", "r": 0.6709, "c": [0.32, 0.18, 0.68, 0.72], "by": "Harriet L. Thompson", "d": "1915", "f": "https://commons.wikimedia.org/wiki/File:Pomological_Watercolor_POM00004755.jpg", "p": [254.0, 242.0, 208.0]}, "apple": {"u": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/Pomological_Watercolor_POM00002280.jpg/1280px-Pomological_Watercolor_POM00002280.jpg", "r": 0.6673, "c": [0.18, 0.13, 0.82, 0.83], "by": "Amanda Newton", "d": "", "f": "https://commons.wikimedia.org/wiki/File:Pomological_Watercolor_POM00002280.jpg", "p": [252.0, 240.0, 217.0]}, "pear": {"u": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Pomological_Watercolor_POM00007023.jpg/1280px-Pomological_Watercolor_POM00007023.jpg", "r": 0.6591, "c": [0.25, 0.12, 0.75, 0.84], "by": "Amanda Almira Newton", "d": "1921", "f": "https://commons.wikimedia.org/wiki/File:Pomological_Watercolor_POM00007023.jpg", "p": [254.0, 250.0, 227.0]}, "grape": {"u": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/69/Pomological_Watercolor_POM00006339.jpg/1280px-Pomological_Watercolor_POM00006339.jpg", "r": 0.8018, "c": [0.26, 0.05, 0.64, 0.83], "by": "Royal Charles Steadman", "d": "1934", "f": "https://commons.wikimedia.org/wiki/File:Pomological_Watercolor_POM00006339.jpg", "p": [255.0, 249.0, 230.0], "g": 1.09}, "cranberry": {"u": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Pomological_Watercolor_POM00007175.jpg/1280px-Pomological_Watercolor_POM00007175.jpg", "r": 0.6545, "c": [0.18, 0.18, 0.88, 0.72], "by": "Amanda Almira Newton", "d": "1913", "f": "https://commons.wikimedia.org/wiki/File:Pomological_Watercolor_POM00007175.jpg", "p": [255.0, 251.0, 236.0]}, "watermelon": {"u": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/58/Pomological_Watercolor_POM00007420.jpg/1280px-Pomological_Watercolor_POM00007420.jpg", "r": 1.5068, "c": [0.3, 0.24, 0.72, 0.8], "by": "Royal Charles Steadman", "d": "1916", "f": "https://commons.wikimedia.org/wiki/File:Pomological_Watercolor_POM00007420.jpg", "p": [254.0, 244.0, 222.0]}, "mango": {"u": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Pomological_Watercolor_POM00004496.jpg/1280px-Pomological_Watercolor_POM00004496.jpg", "r": 0.6464, "c": [0.18, 0.07, 0.85, 0.76], "by": "Elsie Lower Pomeroy", "d": "1910", "f": "https://commons.wikimedia.org/wiki/File:Pomological_Watercolor_POM00004496.jpg", "p": [254.0, 250.0, 228.0]}, "pomegranate": {"u": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b6/Pomological_Watercolor_POM00007501.jpg/1280px-Pomological_Watercolor_POM00007501.jpg", "r": 0.66, "c": [0.2, 0.03, 0.85, 0.95], "by": "Mary Daisy Arnold", "d": "1932", "f": "https://commons.wikimedia.org/wiki/File:Pomological_Watercolor_POM00007501.jpg", "p": [253.0, 231.0, 194.0]}, "persimmon": {"u": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/80/Pomological_Watercolor_POM00001139.jpg/1280px-Pomological_Watercolor_POM00001139.jpg", "r": 0.6536, "c": [0.22, 0.13, 0.7, 0.86], "by": "Deborah Griscom Passmore", "d": "1906", "f": "https://commons.wikimedia.org/wiki/File:Pomological_Watercolor_POM00001139.jpg", "p": [254.0, 248.0, 226.0]}, "grapefruit": {"u": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/Pomological_Watercolor_POM00006708.jpg/1280px-Pomological_Watercolor_POM00006708.jpg", "r": 0.6545, "c": [0.22, 0.05, 0.8, 0.8], "by": "M. Strange", "d": "1915", "f": "https://commons.wikimedia.org/wiki/File:Pomological_Watercolor_POM00006708.jpg", "p": [254.0, 246.0, 215.0]}, "orange": {"u": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d1/Pomological_Watercolor_POM00000339.jpg/1280px-Pomological_Watercolor_POM00000339.jpg", "r": 0.6709, "c": [0.2, 0.07, 0.82, 0.8], "by": "Ellen Isham Schutt", "d": "1914", "f": "https://commons.wikimedia.org/wiki/File:Pomological_Watercolor_POM00000339.jpg", "p": [255.0, 250.0, 230.0]}, "caracara": {"u": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4f/Pomological_Watercolor_POM00006396.jpg/1280px-Pomological_Watercolor_POM00006396.jpg", "r": 0.6664, "c": [0.2, 0.08, 0.85, 0.82], "by": "Mary Daisy Arnold", "d": "1914", "f": "https://commons.wikimedia.org/wiki/File:Pomological_Watercolor_POM00006396.jpg", "p": [254.0, 248.0, 220.0]}, "clementine": {"u": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Pomological_Watercolor_POM00006443.jpg/1280px-Pomological_Watercolor_POM00006443.jpg", "r": 0.6691, "c": [0.18, 0.08, 0.8, 0.65], "by": "Royal Charles Steadman", "d": "1918", "f": "https://commons.wikimedia.org/wiki/File:Pomological_Watercolor_POM00006443.jpg", "p": [252.0, 241.0, 218.0]}, "avocado": {"u": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7a/Pomological_Watercolor_POM00004544.jpg/1280px-Pomological_Watercolor_POM00004544.jpg", "r": 0.6445, "c": [0.18, 0.15, 0.72, 0.87], "by": "M. Strange", "d": "1914", "f": "https://commons.wikimedia.org/wiki/File:Pomological_Watercolor_POM00004544.jpg", "p": [254.0, 243.0, 210.0]}, "asparagus": {"u": "https://upload.wikimedia.org/wikipedia/commons/3/3b/Asperge_de_Hollande_Vilmorin-Andrieux_1883.png", "r": 0.7175, "c": [0, 0, 1, 1], "by": "Vilmorin-Andrieux & Cie", "d": "1883", "f": "https://commons.wikimedia.org/wiki/File:Asperge_de_Hollande_Vilmorin-Andrieux_1883.png", "ink": "#5a7a2e"}, "radish": {"u": "https://upload.wikimedia.org/wikipedia/commons/c/cb/Radis_rond_rose_%C3%A0_bout_blanc_Vilmorin-Andrieux_1883.png", "r": 0.8814, "c": [0, 0, 1, 1], "by": "Vilmorin-Andrieux & Cie", "d": "1883", "f": "https://commons.wikimedia.org/wiki/File:Radis_rond_rose_%C3%A0_bout_blanc_Vilmorin-Andrieux_1883.png", "ink": "#b8325a"}, "spinach": {"u": "https://upload.wikimedia.org/wikipedia/commons/7/7d/%C3%89pinard_monstrueux_de_Viroflay_Vilmorin-Andrieux_1883.png", "r": 2.3467, "c": [0, 0, 1, 1], "by": "Vilmorin-Andrieux & Cie", "d": "1883", "f": "https://commons.wikimedia.org/wiki/File:%C3%89pinard_monstrueux_de_Viroflay_Vilmorin-Andrieux_1883.png", "ink": "#3a6a2e"}, "peas2": {"u": "https://upload.wikimedia.org/wikipedia/commons/2/25/Pois_William_cosses_Vilmorin-Andrieux_1883.png", "r": 0.6109, "c": [0, 0, 1, 1], "by": "Vilmorin-Andrieux & Cie", "d": "1883", "f": "https://commons.wikimedia.org/wiki/File:Pois_William_cosses_Vilmorin-Andrieux_1883.png", "ink": "#4f8030"}, "broccoli": {"u": "https://upload.wikimedia.org/wikipedia/commons/a/ac/Brocoli_branchu_Vilmorin-Andrieux_1883.png", "r": 0.8958, "c": [0, 0, 1, 1], "by": "Vilmorin-Andrieux & Cie", "d": "1883", "f": "https://commons.wikimedia.org/wiki/File:Brocoli_branchu_Vilmorin-Andrieux_1883.png", "ink": "#3f6630"}, "kale": {"u": "https://upload.wikimedia.org/wikipedia/commons/1/1b/Chou_fris%C3%A9_vert_%C3%A0_pied_court_Vilmorin-Andrieux_1883.png", "r": 1.7339, "c": [0, 0, 1, 1], "by": "Vilmorin-Andrieux & Cie", "d": "1883", "f": "https://commons.wikimedia.org/wiki/File:Chou_fris%C3%A9_vert_%C3%A0_pied_court_Vilmorin-Andrieux_1883.png", "ink": "#335f35"}, "zucchini": {"u": "https://upload.wikimedia.org/wikipedia/commons/8/8a/Courge_%C3%A0_la_moelle_Vilmorin-Andrieux_1883.png", "r": 0.7568, "c": [0, 0, 1, 1], "by": "Vilmorin-Andrieux & Cie", "d": "1883", "f": "https://commons.wikimedia.org/wiki/File:Courge_%C3%A0_la_moelle_Vilmorin-Andrieux_1883.png", "ink": "#5a8034"}, "cucumber": {"u": "https://upload.wikimedia.org/wikipedia/commons/7/7e/Concombre_long_vert_d%27Ath%C3%A8nes_Vilmorin-Andrieux_1883.png", "r": 0.7889, "c": [0, 0, 1, 1], "by": "Vilmorin-Andrieux & Cie", "d": "1883", "f": "https://commons.wikimedia.org/wiki/File:Concombre_long_vert_d%27Ath%C3%A8nes_Vilmorin-Andrieux_1883.png", "ink": "#3f6e2e"}, "greenbeans": {"u": "https://upload.wikimedia.org/wikipedia/commons/9/9b/Haricot_nain_blanc_unique_Vilmorin-Andrieux_1883.png", "r": 1.124, "c": [0, 0, 1, 1], "by": "Vilmorin-Andrieux & Cie", "d": "1883", "f": "https://commons.wikimedia.org/wiki/File:Haricot_nain_blanc_unique_Vilmorin-Andrieux_1883.png", "ink": "#4f7d32"}, "carrot": {"u": "https://upload.wikimedia.org/wikipedia/commons/f/f7/Carotte_demi-longue_nantaise_Vilmorin-Andrieux_1883.png", "r": 0.5619, "c": [0, 0, 1, 1], "by": "Vilmorin-Andrieux & Cie", "d": "1883", "f": "https://commons.wikimedia.org/wiki/File:Carotte_demi-longue_nantaise_Vilmorin-Andrieux_1883.png", "ink": "#d2671f"}, "beet": {"u": "https://upload.wikimedia.org/wikipedia/commons/2/2c/Betterave_rouge_ronde_Vilmorin-Andrieux_1883.png", "r": 0.9465, "c": [0, 0, 1, 1], "by": "Vilmorin-Andrieux & Cie", "d": "1883", "f": "https://commons.wikimedia.org/wiki/File:Betterave_rouge_ronde_Vilmorin-Andrieux_1883.png", "ink": "#8e1f3c"}, "corn": {"u": "https://upload.wikimedia.org/wikipedia/commons/f/f6/Ma%C3%AFs_sucr%C3%A9_Vilmorin-Andrieux_1883.png", "r": 0.9779, "c": [0, 0, 1, 1], "by": "Vilmorin-Andrieux & Cie", "d": "1883", "f": "https://commons.wikimedia.org/wiki/File:Ma%C3%AFs_sucr%C3%A9_Vilmorin-Andrieux_1883.png", "ink": "#c39a1f"}, "tomato": {"u": "https://upload.wikimedia.org/wikipedia/commons/4/4d/Tomate_cerise_Vilmorin-Andrieux_1883.png", "r": 1.2698, "c": [0, 0, 1, 1], "by": "Vilmorin-Andrieux & Cie", "d": "1883", "f": "https://commons.wikimedia.org/wiki/File:Tomate_cerise_Vilmorin-Andrieux_1883.png", "ink": "#c23a28"}, "potato": {"u": "https://upload.wikimedia.org/wikipedia/commons/3/33/Pomme_de_terre_Marjolin_Vilmorin-Andrieux_1883.png", "r": 0.7423, "c": [0, 0, 1, 1], "by": "Vilmorin-Andrieux & Cie", "d": "1883", "f": "https://commons.wikimedia.org/wiki/File:Pomme_de_terre_Marjolin_Vilmorin-Andrieux_1883.png", "ink": "#9c7a48"}, "cabbage": {"u": "https://upload.wikimedia.org/wikipedia/commons/0/08/Chou_rouge_gros_Vilmorin-Andrieux_1883.png", "r": 1.2839, "c": [0, 0, 1, 1], "by": "Vilmorin-Andrieux & Cie", "d": "1883", "f": "https://commons.wikimedia.org/wiki/File:Chou_rouge_gros_Vilmorin-Andrieux_1883.png", "ink": "#6e3a78"}, "pepper": {"u": "https://upload.wikimedia.org/wikipedia/commons/4/48/Piment_gros_carr%C3%A9_doux_Vilmorin-Andrieux_1883.png", "r": 0.8464, "c": [0, 0, 1, 1], "by": "Vilmorin-Andrieux & Cie", "d": "1883", "f": "https://commons.wikimedia.org/wiki/File:Piment_gros_carr%C3%A9_doux_Vilmorin-Andrieux_1883.png", "ink": "#bb3a22"}, "edamame": {"u": "https://upload.wikimedia.org/wikipedia/commons/f/fa/Soja_Vilmorin-Andrieux_1883.png", "r": 0.8223, "c": [0, 0, 1, 1], "by": "Vilmorin-Andrieux & Cie", "d": "1883", "f": "https://commons.wikimedia.org/wiki/File:Soja_Vilmorin-Andrieux_1883.png", "ink": "#62822f"}, "cauliflower": {"u": "https://upload.wikimedia.org/wikipedia/commons/3/30/Chou-fleur_Lenormand_Vilmorin-Andrieux_1883.png", "r": 1.263, "c": [0, 0, 1, 1], "by": "Vilmorin-Andrieux & Cie", "d": "1883", "f": "https://commons.wikimedia.org/wiki/File:Chou-fleur_Lenormand_Vilmorin-Andrieux_1883.png", "ink": "#6f8248"}, "sweetpotato": {"u": "https://upload.wikimedia.org/wikipedia/commons/e/ed/Patate_rose_de_Malaga_Vilmorin-Andrieux_1883.png", "r": 1.2907, "c": [0, 0, 1, 1], "by": "Vilmorin-Andrieux & Cie", "d": "1883", "f": "https://commons.wikimedia.org/wiki/File:Patate_rose_de_Malaga_Vilmorin-Andrieux_1883.png", "ink": "#b2573a"}, "squash": {"u": "https://upload.wikimedia.org/wikipedia/commons/9/90/Courge_pleine_de_Naples_Vilmorin-Andrieux_1883.png", "r": 0.6385, "c": [0, 0, 1, 1], "by": "Vilmorin-Andrieux & Cie", "d": "1883", "f": "https://commons.wikimedia.org/wiki/File:Courge_pleine_de_Naples_Vilmorin-Andrieux_1883.png", "ink": "#c47a2a"}, "pumpkin": {"u": "https://upload.wikimedia.org/wikipedia/commons/d/d5/Potiron_rouge_vif_d%27%C3%89tampes_Vilmorin-Andrieux_1883.png", "r": 1.1518, "c": [0, 0, 1, 1], "by": "Vilmorin-Andrieux & Cie", "d": "1883", "f": "https://commons.wikimedia.org/wiki/File:Potiron_rouge_vif_d%27%C3%89tampes_Vilmorin-Andrieux_1883.png", "ink": "#cc6420"}, "brussels": {"u": "https://upload.wikimedia.org/wikipedia/commons/a/a0/Chou_de_Bruxelles_ordinaire_Vilmorin-Andrieux_1883.png", "r": 0.5729, "c": [0, 0, 1, 1], "by": "Vilmorin-Andrieux & Cie", "d": "1883", "f": "https://commons.wikimedia.org/wiki/File:Chou_de_Bruxelles_ordinaire_Vilmorin-Andrieux_1883.png", "ink": "#4f7434"}, "parsnip": {"u": "https://upload.wikimedia.org/wikipedia/commons/9/93/Panais_long_Vilmorin-Andrieux_1883.png", "r": 0.3587, "c": [0, 0, 1, 1], "by": "Vilmorin-Andrieux & Cie", "d": "1883", "f": "https://commons.wikimedia.org/wiki/File:Panais_long_Vilmorin-Andrieux_1883.png", "ink": "#a88a55"}, "cantaloupe": {"u": "https://upload.wikimedia.org/wikipedia/commons/e/ed/Melon_muscade_des_%C3%89tats-Unis_Vilmorin-Andrieux_1883.png", "r": 0.6056, "c": [0, 0, 1, 1], "by": "Vilmorin-Andrieux & Cie", "d": "1883", "f": "https://commons.wikimedia.org/wiki/File:Melon_muscade_des_%C3%89tats-Unis_Vilmorin-Andrieux_1883.png", "ink": "#b88a45"}, "starfruit": {"u": "https://upload.wikimedia.org/wikipedia/commons/e/ef/Averrhoa_carambola_Blanco1.139-cropped.jpg", "r": 0.8618, "c": [0.1, 0.36, 0.95, 0.9], "by": "Francisco Manuel Blanco (O.S.A.)", "d": "1880", "f": "https://commons.wikimedia.org/wiki/File:Averrhoa_carambola_Blanco1.139-cropped.jpg", "p": [255.0, 255.0, 255.0]}, "lychee": {"u": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Flore_m%C3%A9dicale_des_Antilles%2C_ou%2C_Trait%C3%A9_des_plantes_usuelles_%28Pl._332%29_%287795699394%29.jpg/1280px-Flore_m%C3%A9dicale_des_Antilles%2C_ou%2C_Trait%C3%A9_des_plantes_usuelles_%28Pl._332%29_%287795699394%29.jpg", "r": 0.5764, "c": [0.06, 0.1, 0.96, 0.86], "by": "Jean Théodore Descourtilz", "d": "1827", "f": "https://commons.wikimedia.org/wiki/File:Flore_m%C3%A9dicale_des_Antilles%2C_ou%2C_Trait%C3%A9_des_plantes_usuelles_%28Pl._332%29_%287795699394%29.jpg", "p": [241.0, 227.0, 190.0]}, "okra": {"u": "https://upload.wikimedia.org/wikipedia/commons/a/ab/Gombo_%C3%A0_fruit_long_Vilmorin-Andrieux_1883.png", "r": 0.7761, "c": [0, 0, 1, 1], "by": "Vilmorin-Andrieux & Cie", "d": "1883", "f": "https://commons.wikimedia.org/wiki/File:Gombo_%C3%A0_fruit_long_Vilmorin-Andrieux_1883.png", "ink": "#5c7d33"}, "eggplant": {"u": "https://upload.wikimedia.org/wikipedia/commons/f/f3/Aubergine_violette_longue_Vilmorin-Andrieux_1883.png", "r": 0.8459, "c": [0, 0, 1, 1], "by": "Vilmorin-Andrieux & Cie", "d": "1883", "f": "https://commons.wikimedia.org/wiki/File:Aubergine_violette_longue_Vilmorin-Andrieux_1883.png", "ink": "#5a2f66"}};
+// Half-month index: 0 = early Jan ... 23 = late Dec. f = fresh, s = local storage, p = peak. sz = plate size 1-5.
+const CHI_ITEMS = [
+ {n:"Strawberries",la:"Fragaria × ananassa",img:"strawberry",sz:2,k:"fruit",src:"local",f:[[10,12]],p:[[10,11]],t:["A large whole berry to gnaw, or mashed. Smaller pieces once the pincer grasp arrives, around 9 months.", "Quarter, or slice into thin wedges.", "Halve big ones; small ripe berries can go whole with a good chewer."]},
+ {n:"Sweet cherries",la:"Prunus avium",img:"cherry",sz:3,k:"fruit",src:"local",f:[[12,13]],p:[[12,12]],t:["Pit, then smash flat or chop finely.", "Pit and quarter. Pits are a choking hazard.", "Pit and halve."]},
+ {n:"Blueberries",la:"Vaccinium corymbosum",img:"blueberry",sz:1,k:"fruit",src:"local",f:[[12,16]],p:[[13,15]],t:["Flatten each berry between your fingers.", "Halve, or squish if he's still learning to chew.", "Halve until about age 4."]},
+ {n:"Raspberries",la:"Rubus idaeus",img:"raspberry",sz:3,k:"fruit",src:"local",f:[[12,13],[16,19]],p:[[12,12],[17,18]],t:["Soft enough to offer whole, or squished.", "Whole is fine.", "Whole."]},
+ {n:"Blackberries",la:"Rubus fruticosus",img:"blackberry",sz:3,k:"fruit",src:"local",f:[[13,15]],p:[[14,14]],t:["Quarter or mash; they're firmer than raspberries.", "Halve the big ones.", "Whole, or halve large ones."]},
+ {n:"Peaches",la:"Prunus persica",img:"peach",sz:3,k:"fruit",src:"local",f:[[13,16]],p:[[14,15]],t:["Ripe slices with the skin on are easier to grip, or mash.", "Ripe, thin slices. Peel if the fuzz bothers him.", "Slices or wedges."]},
+ {n:"Cantaloupe",la:"Cucumis melo",img:"cantaloupe",sz:4,k:"fruit",src:"local",f:[[13,17]],p:[[14,15]],t:["Thin strips, rind off. Very ripe melon mashes easily.", "Strips or small cubes, rind off.", "Cubes or wedges, rind off."]},
+ {n:"Watermelon",la:"Citrullus lanatus",img:"watermelon",sz:4,k:"fruit",src:"local",f:[[14,17]],p:[[14,15]],t:["Seedless finger-length sticks, rind off. Cold ones soothe sore gums.", "Seedless sticks or cubes.", "Wedges; check for seeds."]},
+ {n:"Plums",la:"Prunus domestica",img:"plum",sz:2,k:"fruit",src:"local",f:[[14,17]],p:[[15,16]],t:["Pit and mash, or give a ripe half, skin on, to gnaw.", "Pit and slice thin; peel if the skin is tart.", "Pit and slice."]},
+ {n:"Apples",la:"Malus domestica",img:"apple",sz:3,k:"fruit",src:"local",f:[[15,21]],s:[[22,7]],p:[[16,19]],t:["Steam or bake until soft, or grate raw. Never raw chunks.", "Grate, slice paper-thin, or bake. Raw chunks are a choking risk.", "Very thin raw slices. Hold off on chunks until about 4."]},
+ {n:"Pears",la:"Pyrus communis",img:"pear",sz:3,k:"fruit",src:"local",f:[[16,21]],s:[[22,1]],p:[[17,19]],t:["Very ripe slices, or mashed. Steam firm ones.", "Ripe, thin slices. Steam firm ones briefly.", "Slices."]},
+ {n:"Grapes",la:"Vitis labrusca",img:"grape",sz:3,k:"fruit",src:"local",f:[[16,18]],p:[[17,17]],t:["Quarter lengthwise and flatten.", "Always quarter lengthwise.", "Quarter lengthwise until 4. Local Concords have seeds; pick seedless."]},
+ {n:"Cranberries",la:"Vaccinium macrocarpon",img:"cranberry",sz:2,k:"fruit",src:"local",f:[[18,23]],p:[[19,21]],t:["Cook into a soft mash, unsweetened or with apple.", "Too tart raw. Simmer into sauce or bake into muffins.", "Sauce or muffins. Let him help stir."]},
+ {n:"Asparagus",la:"Asparagus officinalis",img:"asparagus",sz:3,k:"veg",src:"local",f:[[8,10]],p:[[9,9]],t:["Steam whole spears until very soft. A good first finger food.", "Roast or steam until soft; whole spears are easy to grab.", "Roasted spears."]},
+ {n:"Radishes",la:"Raphanus sativus",img:"radish",sz:2,k:"veg",src:"local",f:[[8,11],[17,19]],p:[[9,10]],t:["Skip raw. Roast until soft and mash.", "Roasting takes the bite out. Raw only if sliced paper-thin.", "Thin raw slices, or roasted."]},
+ {n:"Spinach",la:"Spinacia oleracea",img:"spinach",sz:2,k:"veg",src:"local",f:[[8,11],[17,20]],p:[[9,10],[18,19]],t:["Cook and blend into purées or eggs. Raw leaves stick to the roof of the mouth.", "Blend into eggs, pancakes or smoothies.", "Chopped into eggs or pasta, or raw in smoothies."]},
+ {n:"Peas",la:"Pisum sativum",img:"peas2",sz:2,k:"veg",src:"local",f:[[9,12]],p:[[10,11]],t:["Mash shelled peas. Whole peas once the pincer grasp arrives.", "Shelled peas, lightly squished. Steam snap peas.", "Whole peas, or steamed snap peas."]},
+ {n:"Broccoli",la:"Brassica oleracea var. italica",img:"broccoli",sz:3,k:"veg",src:"local",f:[[10,12],[16,20]],p:[[11,11],[17,19]],t:["Steam big florets until very soft. The stem is a built-in handle.", "Steamed trees; the stem makes a handle.", "Steamed or roasted florets."]},
+ {n:"Kale",la:"Brassica oleracea var. sabellica",img:"kale",sz:2,k:"veg",src:"local",f:[[10,23]],p:[[19,22]],t:["Cook and chop finely, or blend. Raw leaves make babies gag.", "Bake into chips, or blend into sauces.", "Chips, or chopped into soups."]},
+ {n:"Zucchini",la:"Cucurbita pepo",img:"zucchini",sz:3,k:"veg",src:"local",f:[[11,17]],p:[[13,15]],t:["Steamed spears with the skin on for grip, or mashed.", "Roasted half-moons, or grated into muffins.", "Roasted rounds or raw ribbons."]},
+ {n:"Cucumbers",la:"Cucumis sativus",img:"cucumber",sz:3,k:"veg",src:"local",f:[[12,17]],p:[[13,15]],t:["Long peeled, seeded spears to gnaw. Good for teething.", "Peel and cut into spears.", "Spears or thin rounds."]},
+ {n:"Green beans",la:"Phaseolus vulgaris",img:"greenbeans",sz:3,k:"veg",src:"local",f:[[12,17]],p:[[13,15]],t:["Steam whole beans until very soft.", "Steam until fork-tender. Good finger food whole.", "Steamed or roasted, whole."]},
+ {n:"Carrots",la:"Daucus carota",img:"carrot",sz:3,k:"veg",src:"local",f:[[12,21]],s:[[22,5]],p:[[17,20]],t:["Steam or roast whole sticks until very soft, or mash. Never raw.", "Grate raw, or cook into soft sticks. Raw coins are a top choking hazard.", "Grated raw or cooked. No raw coins or chunks until about 4."]},
+ {n:"Beets",la:"Beta vulgaris",img:"beet",sz:3,k:"veg",src:"local",f:[[12,21]],s:[[22,4]],p:[[16,19]],t:["Roast and mash, or soft wedges. Expect pink everything.", "Roasted cubes. They stain everything, him included.", "Roasted cubes, or grated raw into salads."]},
+ {n:"Sweet corn",la:"Zea mays",img:"corn",sz:3,k:"veg",src:"local",f:[[13,16]],p:[[14,15]],t:["A short piece of cob to gnaw, or mashed kernels.", "Cut the kernels off; a short cob piece to gnaw.", "Corn on the cob."]},
+ {n:"Tomatoes",la:"Solanum lycopersicum",img:"tomato",sz:2,k:"veg",src:"local",f:[[13,18]],p:[[14,16]],t:["Quarter cherry tomatoes and flatten them. Big wedges, skin on, to gnaw.", "Quarter cherry tomatoes lengthwise.", "Quarter cherry tomatoes lengthwise until about 4."]},
+ {n:"Potatoes",la:"Solanum tuberosum",img:"potato",sz:3,k:"veg",src:"local",f:[[13,19]],s:[[20,7]],p:[[16,18]],t:["Mashed, or very soft roasted wedges.", "Roasted wedges or mashed.", "Roasted, mashed or baked."]},
+ {n:"Cabbage",la:"Brassica oleracea var. capitata",img:"cabbage",sz:3,k:"veg",src:"local",f:[[13,21]],s:[[22,3]],p:[[18,20]],t:["Cook until very soft and chop finely, or blend into soup.", "Cook until soft; shred into soups or stir-fries.", "Cooked, or very thin raw slaw."]},
+ {n:"Bell peppers",la:"Capsicum annuum",img:"pepper",sz:3,k:"veg",src:"local",f:[[14,19]],p:[[15,17]],t:["Roast and peel; soft strips to hold.", "Roasted strips, or thin raw strips.", "Raw strips. Red and orange are sweetest."]},
+ {n:"Edamame",la:"Glycine max",img:"edamame",sz:3,k:"veg",src:"local",f:[[15,17]],p:[[16,16]],t:["Shelled and smashed flat, or blended into a dip.", "Shelled; squish for younger toddlers.", "Shelled, whole."]},
+ {n:"Eggplant",la:"Solanum melongena",img:"eggplant",sz:3,k:"veg",src:"local",f:[[14,18]],p:[[15,16]],t:["Roast until very soft; skin off, in strips or mashed.","Roasted strips or baked rounds.","Roasted, or in pasta sauce."]},
+ {n:"Okra",la:"Abelmoschus esculentus",img:"okra",sz:3,k:"veg",src:"local",f:[[14,17]],p:[[15,16]],t:["Roast or steam whole pods until soft; the ridges are easy to grip.","Roasted whole pods, or sliced into stews.","Roasted pods or crispy okra fries."]},
+ {n:"Cauliflower",la:"Brassica oleracea var. botrytis",img:"cauliflower",sz:3,k:"veg",src:"local",f:[[17,20]],p:[[18,19]],t:["Steam big florets until very soft.", "Roast until golden; it gets sweet.", "Roasted, or raw in small pieces with a dip."]},
+ {n:"Sweet potatoes",la:"Ipomoea batatas",img:"sweetpotato",sz:3,k:"veg",src:"local",f:[[17,19]],s:[[20,5]],p:[[18,20]],t:["Roasted wedges or mashed. A classic first food.", "Roasted wedges. One of the easiest wins.", "Roasted wedges or oven fries."]},
+ {n:"Winter squash",la:"Cucurbita moschata",img:"squash",sz:4,k:"veg",src:"local",f:[[17,21]],s:[[22,4]],p:[[18,20]],t:["Roasted and mashed, or soft cubes.", "Roast butternut cubes or mash. Delicata skin is edible.", "Roasted cubes or soup."]},
+ {n:"Pie pumpkins",la:"Cucurbita maxima",img:"pumpkin",sz:4,k:"veg",src:"local",f:[[17,20]],p:[[18,19]],t:["Roasted and mashed.", "Small sugar pumpkins, not carvers. Roast and mash, or bake into muffins.", "Muffins or pancakes. Let him scoop out the seeds."]},
+ {n:"Brussels sprouts",la:"Brassica oleracea var. gemmifera",img:"brussels",sz:3,k:"veg",src:"local",f:[[18,22]],p:[[19,21]],t:["Steam until very soft and quarter, or mash.", "Halve and roast soft. Frost makes them sweeter.", "Roasted halves."]},
+ {n:"Parsnips",la:"Pastinaca sativa",img:"parsnip",sz:3,k:"veg",src:"local",f:[[6,7],[19,22]],p:[[20,21]],t:["Roasted sticks, very soft.", "Roasted sticks taste like sweet carrots.", "Roasted sticks or fries."]},
+ // shipped in
+ {n:"Asparagus",la:"from California",img:"asparagus",sz:3,k:"veg",src:"ship",f:[[4,7]],p:[[5,6]],t:["Steam whole spears until very soft. A good first finger food.", "Roast or steam until soft; whole spears are easy to grab.", "Roasted spears."]},
+ {n:"Avocados",la:"Persea americana · California",img:"avocado",sz:3,k:"veg",src:"ship",f:[[6,15]],p:[[8,13]],t:["Mashed, or wedges rolled in crushed cereal for grip.", "Spears, or mashed on toast.", "Slices, or guacamole to dip."]},
+ {n:"Mangoes",la:"Mangifera indica · Mexico",img:"mango",sz:3,k:"fruit",src:"ship",f:[[5,13]],p:[[7,11]],t:["A large spear to gnaw, or mashed. Honey mangoes are least stringy.", "Spears; honey (Ataulfo) mangoes are least stringy.", "Cubes or spears."]},
+ {n:"Strawberries",la:"Florida, then California",img:"strawberry",sz:2,k:"fruit",src:"ship",f:[[23,9]],p:[[6,8]],t:["A large whole berry to gnaw, or mashed. Smaller pieces once the pincer grasp arrives, around 9 months.", "Quarter, or slice into thin wedges.", "Halve big ones; small ripe berries can go whole with a good chewer."]},
+ {n:"Blueberries",la:"Chile, Peru",img:"blueberry",sz:1,k:"fruit",src:"ship",f:[[22,5]],p:[[0,3]],t:["Flatten each berry between your fingers.", "Halve, or squish if he's still learning to chew.", "Halve until about age 4."]},
+ {n:"Pomegranates",la:"Punica granatum · California",img:"pomegranate",sz:3,k:"fruit",src:"ship",f:[[18,23]],p:[[19,22]],t:["Crush the arils, or wait until the pincer grasp is solid.", "Arils with supervision; crush them for younger toddlers.", "Arils, with supervision."]},
+ {n:"Persimmons",la:"Diospyros kaki · California",img:"persimmon",sz:3,k:"fruit",src:"ship",f:[[19,23]],p:[[20,22]],t:["Jelly-soft Hachiya scooped from the skin, or ripe Fuyu mashed.", "Fuyu in thin slices. Hachiya only when jelly-soft.", "Fuyu wedges."]},
+ {n:"Kiwi",la:"Actinidia deliciosa · California",img:null,sz:2,k:"fruit",src:"ship",f:[[20,9]],p:[[22,5]],t:["Peel and offer soft wedges, or mash.", "Halve and scoop, or peel and slice.", "Halve and scoop with a spoon."]},
+ {n:"Clementines",la:"Citrus reticulata · California",img:"clementine",sz:3,k:"fruit",src:"ship",f:[[21,3]],p:[[22,1]],t:["Remove the membranes and flatten small pieces.", "Peel and separate; halve the segments.", "Whole segments."]},
+ {n:"Grapefruit",la:"Citrus × paradisi · Texas, Florida",img:"grapefruit",sz:3,k:"fruit",src:"ship",f:[[21,7]],p:[[0,4]],t:["Membrane-free pieces. Often too sour, which is fine.", "Cut the segments out of their membranes. Ruby Red is sweetest.", "Segments, membranes off."]},
+ {n:"Navel oranges",la:"Citrus × sinensis · California",img:"orange",sz:3,k:"fruit",src:"ship",f:[[22,7]],p:[[0,4]],t:["Membrane-free pieces, flattened.", "Peel, segment, halve the segments.", "Segments."]},
+ {n:"Cara Cara oranges",la:"Citrus × sinensis · California",img:"caracara",sz:3,k:"fruit",src:"ship",f:[[23,6]],p:[[0,3]],t:["Membrane-free pieces. Sweet and low-acid.", "Pink, low-acid and very sweet. Good gateway citrus.", "Segments or wedges."]}
+];
+// Tips are per food, not per place: Florida reuses Chicago's by plate key.
+const TIP = k => (CHI_ITEMS.find(x=>x.img===k&&x.src==="local")||CHI_ITEMS.find(x=>x.img===k)).t;
+// Florida as a whole. Windows follow the FDACS Florida Produce Seasonal Availability Calendar (2023) where it lists the crop;
+// peaks, and crops it doesn't list (lychees, starfruit, okra, muscadines, kale, Brussels sprouts, beets, sweet potatoes), are best estimates.
+const FL_ITEMS = [
+ {n:"Strawberries",la:"Fragaria × ananassa · Plant City",img:"strawberry",sz:2,k:"fruit",src:"local",f:[[22,7]],p:[[2,5]],t:TIP("strawberry")},
+ {n:"Blueberries",la:"Vaccinium corymbosum",img:"blueberry",sz:1,k:"fruit",src:"local",f:[[4,9]],p:[[7,8]],t:TIP("blueberry")},
+ {n:"Peaches",la:"Prunus persica · low-chill",img:"peach",sz:3,k:"fruit",src:"local",f:[[6,9]],p:[[7,8]],t:TIP("peach")},
+ {n:"Blackberries",la:"Rubus fruticosus",img:"blackberry",sz:3,k:"fruit",src:"local",f:[[6,13]],p:[[9,10]],t:TIP("blackberry")},
+ {n:"Cantaloupe",la:"Cucumis melo",img:"cantaloupe",sz:4,k:"fruit",src:"local",f:[[4,13]],p:[[8,10]],t:TIP("cantaloupe")},
+ {n:"Watermelon",la:"Citrullus lanatus",img:"watermelon",sz:4,k:"fruit",src:"local",f:[[4,13],[18,23]],p:[[8,11]],t:TIP("watermelon")},
+ {n:"Mangoes",la:"Mangifera indica",img:"mango",sz:3,k:"fruit",src:"local",f:[[8,17]],p:[[11,13]],t:TIP("mango")},
+ {n:"Lychees",la:"Litchi chinensis",img:"lychee",sz:3,k:"fruit",src:"local",f:[[9,13]],p:[[10,11]],t:["Peel, pit and chop finely or mash. Whole lychees are a serious choking risk.","Peel, pit and quarter. Ripe fruit only, after a meal.","Peel, pit and halve or quarter. Ripe fruit only, after a meal."]},
+ {n:"Starfruit",la:"Averrhoa carambola",img:"starfruit",sz:3,k:"fruit",src:"local",f:[[14,5]],p:[[16,19]],t:["Very ripe, thin slices with the waxy edges trimmed, or mashed. Skip if your child has any kidney condition.","Thin star-shaped slices, seeds out. Skip if your child has any kidney condition.","Star slices, seeds out. Skip if your child has any kidney condition."]},
+ {n:"Muscadine grapes",la:"Vitis rotundifolia",img:"grape",sz:3,k:"fruit",src:"local",f:[[14,17]],p:[[15,16]],t:["Squeeze the pulp out of the thick skin, pick out the seeds, and quarter it.","Squeeze the pulp out of the skin, remove the seeds, and quarter lengthwise.","Pop the pulp out of the skin and seed it; keep quartering until about 4."]},
+ {n:"Avocados",la:"Persea americana · Florida green-skins",img:"avocado",sz:3,k:"veg",src:"local",f:[[10,3]],p:[[14,19]],t:TIP("avocado")},
+ {n:"Oranges",la:"Citrus × sinensis · navel, then Valencia",img:"orange",sz:3,k:"fruit",src:"local",f:[[16,11]],p:[[22,5]],t:TIP("orange")},
+ {n:"Tangerines",la:"Citrus reticulata · Fallglo, Sunburst, Honey",img:"clementine",sz:3,k:"fruit",src:"local",f:[[16,7]],p:[[21,3]],t:TIP("clementine")},
+ {n:"Grapefruit",la:"Citrus × paradisi",img:"grapefruit",sz:3,k:"fruit",src:"local",f:[[18,9]],p:[[22,5]],t:TIP("grapefruit")},
+ {n:"Tomatoes",la:"Solanum lycopersicum",img:"tomato",sz:2,k:"veg",src:"local",f:[[18,11]],p:[[22,7]],t:TIP("tomato")},
+ {n:"Bell peppers",la:"Capsicum annuum",img:"pepper",sz:3,k:"veg",src:"local",f:[[18,11]],p:[[22,5]],t:TIP("pepper")},
+ {n:"Green beans",la:"Phaseolus vulgaris",img:"greenbeans",sz:3,k:"veg",src:"local",f:[[18,11]],p:[[22,7]],t:TIP("greenbeans")},
+ {n:"Eggplant",la:"Solanum melongena",img:"eggplant",sz:3,k:"veg",src:"local",f:[[18,11]],p:[[2,7]],t:["Roast until very soft; skin off, in strips or mashed.","Roasted strips or baked rounds.","Roasted, or in pasta sauce."]},
+ {n:"Okra",la:"Abelmoschus esculentus",img:"okra",sz:3,k:"veg",src:"local",f:[[8,19]],p:[[12,15]],t:["Roast or steam whole pods until soft; the ridges are easy to grip.","Roasted whole pods, or sliced into stews.","Roasted pods or crispy okra fries."]},
+ {n:"Sweet corn",la:"Zea mays",img:"corn",sz:3,k:"veg",src:"local",f:[[20,9]],p:[[6,9]],t:TIP("corn")},
+ {n:"Cucumbers",la:"Cucumis sativus",img:"cucumber",sz:3,k:"veg",src:"local",f:[[18,11]],p:[[6,9]],t:TIP("cucumber")},
+ {n:"Summer squash",la:"Cucurbita pepo · zucchini, yellow",img:"zucchini",sz:3,k:"veg",src:"local",f:[[18,11]],p:[[6,9]],t:TIP("zucchini")},
+ {n:"Sweet potatoes",la:"Ipomoea batatas",img:"sweetpotato",sz:3,k:"veg",src:"local",f:[[16,9]],p:[[19,23]],t:TIP("sweetpotato")},
+ {n:"Radishes",la:"Raphanus sativus",img:"radish",sz:2,k:"veg",src:"local",f:[[20,9]],p:[[22,3]],t:TIP("radish")},
+ {n:"Kale",la:"Brassica oleracea var. sabellica",img:"kale",sz:2,k:"veg",src:"local",f:[[20,9]],p:[[22,5]],t:TIP("kale")},
+ {n:"Spinach",la:"Spinacia oleracea",img:"spinach",sz:2,k:"veg",src:"local",f:[[20,7]],p:[[22,3]],t:TIP("spinach")},
+ {n:"Cabbage",la:"Brassica oleracea var. capitata",img:"cabbage",sz:3,k:"veg",src:"local",f:[[22,9]],p:[[0,7]],t:TIP("cabbage")},
+ {n:"Broccoli",la:"Brassica oleracea var. italica",img:"broccoli",sz:3,k:"veg",src:"local",f:[[22,7]],p:[[0,5]],t:TIP("broccoli")},
+ {n:"Cauliflower",la:"Brassica oleracea var. botrytis",img:"cauliflower",sz:3,k:"veg",src:"local",f:[[0,5]],p:[[2,3]],t:TIP("cauliflower")},
+ {n:"Brussels sprouts",la:"Brassica oleracea var. gemmifera",img:"brussels",sz:3,k:"veg",src:"local",f:[[22,5]],p:[[0,3]],t:TIP("brussels")},
+ {n:"Carrots",la:"Daucus carota",img:"carrot",sz:3,k:"veg",src:"local",f:[[20,11]],p:[[2,7]],t:TIP("carrot")},
+ {n:"Beets",la:"Beta vulgaris",img:"beet",sz:3,k:"veg",src:"local",f:[[22,7]],p:[[2,5]],t:TIP("beet")},
+ {n:"Potatoes",la:"Solanum tuberosum · new potatoes",img:"potato",sz:3,k:"veg",src:"local",f:[[2,11]],p:[[6,9]],t:TIP("potato")},
+ // shipped in: northern and western crops at their own peak
+ {n:"Asparagus",la:"from California",img:"asparagus",sz:3,k:"veg",src:"ship",f:[[4,7]],p:[[5,6]],t:TIP("asparagus")},
+ {n:"Sweet cherries",la:"Prunus avium · Washington, California",img:"cherry",sz:3,k:"fruit",src:"ship",f:[[10,14]],p:[[12,13]],t:TIP("cherry")},
+ {n:"Peaches",la:"Prunus persica · Georgia, South Carolina",img:"peach",sz:3,k:"fruit",src:"ship",f:[[11,15]],p:[[12,14]],t:TIP("peach")},
+ {n:"Blueberries",la:"Vaccinium · Georgia, then Michigan",img:"blueberry",sz:1,k:"fruit",src:"ship",f:[[11,16]],p:[[12,14]],t:TIP("blueberry")},
+ {n:"Plums",la:"Prunus domestica · California",img:"plum",sz:2,k:"fruit",src:"ship",f:[[11,17]],p:[[13,15]],t:TIP("plum")},
+ {n:"Table grapes",la:"Vitis vinifera · California",img:"grape",sz:3,k:"fruit",src:"ship",f:[[13,21]],p:[[15,19]],t:TIP("grape")},
+ {n:"Apples",la:"Malus domestica · Washington, New York",img:"apple",sz:3,k:"fruit",src:"ship",f:[[16,23]],p:[[17,21]],t:TIP("apple")},
+ {n:"Pears",la:"Pyrus communis · Washington, Oregon",img:"pear",sz:3,k:"fruit",src:"ship",f:[[16,1]],p:[[17,20]],t:TIP("pear")},
+ {n:"Cranberries",la:"Vaccinium macrocarpon · Wisconsin",img:"cranberry",sz:2,k:"fruit",src:"ship",f:[[18,23]],p:[[19,21]],t:TIP("cranberry")},
+ {n:"Pomegranates",la:"Punica granatum · California",img:"pomegranate",sz:3,k:"fruit",src:"ship",f:[[18,23]],p:[[19,22]],t:TIP("pomegranate")},
+ {n:"Persimmons",la:"Diospyros kaki · California",img:"persimmon",sz:3,k:"fruit",src:"ship",f:[[19,23]],p:[[20,22]],t:TIP("persimmon")},
+ {n:"Kiwi",la:"Actinidia deliciosa · California",img:null,sz:2,k:"fruit",src:"ship",f:[[20,9]],p:[[22,5]],t:CHI_ITEMS.find(x=>x.n==="Kiwi").t}
+];
+const REGIONS={
+  chi:{name:"Chicago & the near Midwest",items:CHI_ITEMS,
+    dates:"They are typical harvest windows for northern Illinois, southwest Michigan and southern Wisconsin, which is what Chicago markets sell, checked against University of Illinois Extension’s <a href=\"https://extension.illinois.edu/sites/default/files/cjmmwhatsinseason.pdf\" rel=\"noopener\"><i>What’s in Season</i></a> chart and A Healthier Michigan’s <a href=\"https://www.ahealthiermichigan.org/stories/food-and-recipes/the-month-by-month-guide-for-when-michigan-produce-is-in-season\" rel=\"noopener\"><i>Month-by-Month Guide</i></a>. Weather moves them a week or two either way, and peaks are fuzzier than starts and ends. The market table is the final word.",
+    offH:"Winter",
+    off:"From about December to April almost nothing grows outdoors here. “From the cellar” means local crops kept in cold storage. “Shipped in” lists produce grown elsewhere during its own peak, when grocery quality and price are best."},
+  fl:{name:"Florida",items:FL_ITEMS,
+    dates:"Most come from the Florida Department of Agriculture’s <a href=\"https://ccmedia.fdacs.gov/content/download/16790/file/florida-produce-seasonal-availability-chart.pdf\" rel=\"noopener\"><i>Florida Produce Seasonal Availability Calendar</i></a>, which covers the whole state. A few crops it skips are filled in from its monthly <a href=\"https://ccmedia.fdacs.gov/content/download/16801/file/What%27s%20In%20Season%20For%20the%20Month%20of%20October.pdf\" rel=\"noopener\"><i>What’s in Season</i></a> lists, <a href=\"https://rockledgegardens.com/fresh-from-the-farm/produce-seasonaility-chart/\" rel=\"noopener\">Rockledge Gardens’ seasonality chart</a>, and best estimates. The calendar marks months but not peaks, so “at their best” is an estimate. South Florida tends to run a few weeks earlier than the Panhandle. The market table is the final word.",
+    offH:"Summer",
+    off:"Florida’s growing season runs roughly October to June. July through September is too hot and wet for most crops, so the local list thins out to mangoes, avocados and muscadines, and “Shipped in” does more of the work. That’s when northern apples, peaches and cherries are at their best."}
+};
+let ITEMS=CHI_ITEMS;
+const SIZE={1:105,2:128,3:150,4:178,5:205};
+const MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
+const MSHORT=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const half=d=>d.getMonth()*2+(d.getDate()>15?1:0);
+const halfLabel=h=>(h%2?"late ":"early ")+MONTHS[Math.floor(h/2)];
+const inW=(i,[a,b])=>a<=b?(i>=a&&i<=b):(i>=a||i<=b);
+const findW=(i,ws)=>(ws||[]).find(w=>inW(i,w));
+const mod=n=>((n%24)+24)%24;
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+// Colour work happens in SVG filters so the plates can be hotlinked from Wikimedia untouched:
+// watercolors get a per-plate white balance (their paper goes to white, then multiplies onto ours);
+// engravings get a two-ink gradient map, like a hand-tinted print.
+(function buildFilters(){
+  const hex=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)/255);
+  let s="";
+  for(const [k,p] of Object.entries(PLATES)){
+    if(p.p){
+      const gain=p.g||1.03, [r,g,b]=p.p.map(v=>(gain*255/v).toFixed(4));
+      s+=`<filter id="f-${k}" color-interpolation-filters="sRGB"><feComponentTransfer><feFuncR type="linear" slope="${r}"/><feFuncG type="linear" slope="${g}"/><feFuncB type="linear" slope="${b}"/></feComponentTransfer></filter>`;
+    } else {
+      const m=hex(p.ink), ink=m.map((v,i)=>[0.16,0.13,0.10][i]*0.6+v*0.25);
+      const t=i=>`${ink[i].toFixed(3)} ${(m[i]*0.85).toFixed(3)} ${Math.min(1,m[i]*0.6+0.45).toFixed(3)} 1 1`;
+      s+=`<filter id="f-${k}" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="0.3 0.59 0.11 0 0 0.3 0.59 0.11 0 0 0.3 0.59 0.11 0 0 0 0 0 1 0"/><feComponentTransfer><feFuncR type="table" tableValues="${t(0)}"/><feFuncG type="table" tableValues="${t(1)}"/><feFuncB type="table" tableValues="${t(2)}"/></feComponentTransfer></filter>`;
+    }
+  }
+  document.getElementById("filters").innerHTML=s;
+})();
+
+// Plates load straight from Wikimedia Commons. Set LOCAL_PLATES to true to use copies in a plates/ folder instead.
+const LOCAL_PLATES = false;
+const plateSrc = (k,p) => LOCAL_PLATES ? "plates/"+k+".jpg" : p.u;
+
+function altFor(key){const p=PLATES[key];return p?`Plate by ${p.by}${p.d?", "+p.d:""}`:""}
+function cutH(key,h){
+  const p=key&&PLATES[key]; if(!p) return h;
+  const [x0,y0,x1,y1]=p.c, ar=((x1-x0)*p.r)/(y1-y0);
+  return Math.round(Math.min(Math.max(h/Math.sqrt(ar),h*0.7),h*1.5,300/ar));
+}
+function cut(key,h){
+  const p=key&&PLATES[key];
+  if(!p) return `<div class="cut blank" style="--h:${h}px;aspect-ratio:1">no plate</div>`;
+  const [x0,y0,x1,y1]=p.c, cw=x1-x0, ch=y1-y0, ar=(cw*p.r)/ch;
+  // size by area rather than height, so tall narrow plates and wide ones carry similar weight
+  const hh=Math.round(Math.min(Math.max(h/Math.sqrt(ar),h*0.7),h*1.5,300/ar));
+  const title=`${p.by}${p.d?", "+p.d:""}`;
+  return `<div class="cut" style="--h:${hh}px;--ar:${ar.toFixed(4)};--iw:${(100/cw).toFixed(3)}%;--il:${(-100*x0/cw).toFixed(3)}%;--it:${(-100*y0/ch).toFixed(3)}%" title="${esc(title)}"><img src="${plateSrc(key,p)}" alt="${esc(altFor(key))}" decoding="async" referrerpolicy="no-referrer" style="filter:url(#f-${key})"></div>`;
+}
+
+function status(it,i){
+  const fw=findW(i,it.f);
+  if(fw){
+    const len=mod(fw[1]-fw[0])+1,pos=mod(i-fw[0]),left=mod(fw[1]-i);
+    const intoStorage=(it.s||[]).some(w=>w[0]===mod(fw[1]+1));
+    if(left===0&&len>2&&!intoStorage&&it.src==="local") return "last";
+    if(findW(i,it.p)) return "peak";
+    if(pos===0&&len>2) return "new";
+    return "in";
+  }
+  if(findW(i,it.s)) return "storage";
+  return null;
+}
+
+const state={date:new Date(),filter:"all",open:new Set(),age:1,mode:"system",region:"chi"};
+const store={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}}};
+(()=>{const f=store.get("hc-filter"); if(f) state.filter=f;
+  if(store.get("hc-tips")==="1"){document.body.classList.add("tips");document.getElementById("tips").checked=true}
+  const a=store.get("hc-age"); if(a!==null&&!isNaN(+a)) state.age=+a;
+  const m=store.get("hc-mode"); if(m) state.mode=m;
+  const r=store.get("hc-region"); if(r&&REGIONS[r]) state.region=r;})();
+function applyRegion(){
+  const R=REGIONS[state.region]; ITEMS=R.items;
+  document.getElementById("regionName").textContent=R.name;
+  document.getElementById("noteDates").innerHTML=R.dates;
+  document.getElementById("noteOffH").textContent=R.offH;
+  document.getElementById("noteOff").textContent=R.off;
+  document.querySelectorAll("button[data-region]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.region===state.region));
+}
+function applyMode(){
+  if(state.mode==="system") document.documentElement.removeAttribute("data-mode");
+  else document.documentElement.setAttribute("data-mode",state.mode);
+  document.querySelectorAll("[data-mode]").forEach(b=>{if(b.tagName==="BUTTON") b.setAttribute("aria-pressed",b.dataset.mode===state.mode)});
+}
+function applyAge(){ document.querySelectorAll("[data-age]").forEach(b=>b.setAttribute("aria-pressed",+b.dataset.age===state.age)); }
+applyMode(); applyAge(); applyRegion();
+
+function credit(key){const p=key&&PLATES[key];if(!p) return "";return `<p class="credit">${esc(p.by)}${p.d?", "+p.d:""} · <a href="${p.f}" rel="noopener" target="_blank">original</a></p>`}
+function plate(it,g,i,slot){
+  const p=SIZE[it.sz]||160, scale=matchMedia("(max-width:560px)").matches?0.72:1;
+  let mark="";
+  const fw=findW(i,it.f);
+  const pw=findW(i,it.p), sw=findW(i,it.s);
+  if(g==="peak"&&pw) mark=`<span class="mark peak">best through ${halfLabel(pw[1])}</span>`;
+  else if((g==="new"||g==="in")&&fw) mark=`<span class="mark">through ${halfLabel(fw[1])}</span>`;
+  else if(g==="storage"&&sw) mark=`<span class="mark">keeps through ${halfLabel(sw[1])}</span>`;
+  else if(g==="ship") mark=`<span class="mark ship">${pw?"at its best now":(it.p&&it.p[0]?"best from "+halfLabel(it.p[0][0]):"")}</span>`;
+  else if(g==="soon") mark=`<span class="mark">from ${halfLabel(it._soon)}</span>`;
+  const id=it.n+"|"+it.src;
+  return `<figure class="plate${state.open.has(id)?" open":""}" style="margin:0"><button type="button" data-id="${esc(id)}" aria-expanded="${state.open.has(id)}">
+    <span class="slot" style="--slot:${slot}px">${cut(it.img,Math.round(p*scale))}</span>
+    <span class="cap"><span class="cname">${esc(it.n)}</span><span class="latin">${esc(it.la)}</span>${mark}</span></button>
+    <p class="tip">${esc(it.t[state.age]||it.t[1])}</p>${credit(it.img)}</figure>`;
+}
+
+function render(){
+  const d=state.date,i=half(d),now=new Date(),isToday=d.toDateString()===now.toDateString();
+  document.getElementById("date").textContent=`${isToday?"This week":"The week"} of ${d.toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"})} · ${halfLabel(i)}`;
+  document.getElementById("today").setAttribute("aria-pressed",isToday);
+  document.querySelectorAll("[data-f]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.f===state.filter));
+
+  const flt=it=>state.filter==="all"||it.k===state.filter;
+  const G={last:[],peak:[],new:[],in:[],storage:[],ship:[],soon:[]};
+  ITEMS.filter(flt).forEach(it=>{
+    if(it.src==="ship"){ if(findW(i,it.f)) G.ship.push(it); return; }
+    const st=status(it,i);
+    if(st) G[st].push(it);
+    else for(let k=1;k<=4;k++){ if((it.f||[]).some(w=>w[0]===mod(i+k))){ G.soon.push({...it,_soon:mod(i+k),_k:k}); break; } }
+  });
+  G.soon.sort((a,b)=>a._k-b._k);
+  const defs=[
+    ["last","Last call","The final couple of weeks this year."],
+    ["peak","At their best","Peak flavor and the lowest prices."],
+    ["new","Just in","The first weeks of the season."],
+    ["in","Also good now","In season, either side of the peak."],
+    ["storage","From the cellar","Harvested in fall and kept cold. Still local, still good."],
+    ["ship","Shipped in","Grown elsewhere, in their own best season."],
+    ["soon","Coming soon","Arriving in the next two months."]
+  ];
+  document.getElementById("board").innerHTML=defs.filter(([g])=>G[g].length).map(([g,title,desc])=>
+    `<section class="section sec-${g}${g==="soon"?" soon":""}"><div class="shead"><h2>${title}</h2><span class="count">${G[g].length}</span><p class="desc">${desc}</p></div>
+     <div class="collage">${(()=>{const sc=matchMedia("(max-width:560px)").matches?0.72:1, slot=Math.max(...G[g].map(it=>cutH(it.img,Math.round((SIZE[it.sz]||160)*sc))));return G[g].map(it=>plate(it,g,i,slot)).join("")})()}</div></section>`).join("")
+    || `<p class="empty">Nothing to show for this filter this week.</p>`;
+
+  let h=`<div class="corner"></div>`;
+  for(let m=0;m<12;m++) h+=`<button type="button" class="mh${Math.floor(i/2)===m?" on":""}" data-m="${m}">${MSHORT[m]}</button>`;
+  [["Fruit",it=>it.src==="local"&&it.k==="fruit"],["Vegetables",it=>it.src==="local"&&it.k==="veg"],["Shipped in",it=>it.src==="ship"]].forEach(([name,fn])=>{
+    const rows=ITEMS.filter(fn).filter(flt); if(!rows.length) return;
+    h+=`<div class="gh"><span>${name}</span></div>`;
+    rows.forEach(it=>{
+      const kc=it.src==="ship"?"k-ship":"k-"+it.k;
+      h+=`<div class="rn"><span>${esc(it.n)}</span></div>`;
+      for(let c=0;c<24;c++){
+        let cl="c "+kc+(c%2===0?" m0":"");
+        if(findW(c,it.f)) cl+=findW(c,it.p)?" peak":" fresh"; else if(findW(c,it.s)) cl+=" storage";
+        if(c===i) cl+=" now";
+        h+=`<div class="${cl}"></div>`;
+      }
+    });
+  });
+  document.getElementById("year").innerHTML=h;
+}
+
+const shift=n=>{const d=new Date(state.date);d.setDate(d.getDate()+n);state.date=d;render()};
+document.getElementById("prev").onclick=()=>shift(-7);
+document.getElementById("next").onclick=()=>shift(7);
+document.getElementById("today").onclick=()=>{state.date=new Date();render()};
+document.querySelectorAll("[data-f]").forEach(b=>b.onclick=()=>{state.filter=b.dataset.f;try{localStorage.setItem("hc-filter",state.filter)}catch(e){}render()});
+document.getElementById("tips").onchange=e=>{document.body.classList.toggle("tips",e.target.checked);store.set("hc-tips",e.target.checked?"1":"0")};
+document.querySelectorAll("button[data-region]").forEach(b=>b.onclick=()=>{state.region=b.dataset.region;store.set("hc-region",state.region);state.open.clear();applyRegion();document.getElementById("region").open=false;render()});
+document.addEventListener("click",e=>{const d=document.getElementById("region");if(d.open&&!d.contains(e.target)) d.open=false});
+document.addEventListener("keydown",e=>{if(e.key==="Escape") document.getElementById("region").open=false});
+document.querySelectorAll("button[data-age]").forEach(b=>b.onclick=()=>{state.age=+b.dataset.age;store.set("hc-age",state.age);applyAge();render()});
+document.querySelectorAll("button[data-mode]").forEach(b=>b.onclick=()=>{state.mode=b.dataset.mode;store.set("hc-mode",state.mode);applyMode()});
+document.getElementById("board").addEventListener("click",e=>{
+  const b=e.target.closest("button[data-id]"); if(!b) return;
+  const id=b.dataset.id, fig=b.parentElement;
+  if(state.open.has(id)) state.open.delete(id); else state.open.add(id);
+  fig.classList.toggle("open"); b.setAttribute("aria-expanded",fig.classList.contains("open"));
+});
+document.getElementById("year").addEventListener("click",e=>{
+  const b=e.target.closest(".mh"); if(!b) return;
+  state.date=new Date(state.date.getFullYear(),+b.dataset.m,8); render();
+  window.scrollTo({top:0,behavior:matchMedia("(prefers-reduced-motion:reduce)").matches?"auto":"smooth"});
+});
+render();
+</script>
