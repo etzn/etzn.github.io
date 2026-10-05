@@ -1,3 +1,8 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Chicago Harvest Calendar</title>
 <meta name="description" content="What's in season around Chicago this week, drawn from public-domain USDA pomological watercolors and Vilmorin-Andrieux engravings.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -163,6 +168,8 @@ button:focus-visible{outline:1px dashed var(--ink);outline-offset:4px}
 :root[data-mode="dark"] .collage{--ink:#2A241D;--ink-soft:#6B6254;--rule:#C9BEA8;--oxblood:#8A2E1E;--sage:#55703A;--slate:#4A6275;color:var(--ink);background:var(--sheet);border-radius:2px;padding:30px 22px 26px;box-shadow:0 1px 0 rgba(0,0,0,.4),0 14px 34px -18px rgba(0,0,0,.9)}:root[data-mode="dark"] .year .rn .cut:not(.blank){mix-blend-mode:normal;background:var(--sheet);border-radius:3px}
 @media (prefers-reduced-motion:reduce){ .cut{transition:none} .plate > button:hover .cut{transform:none} }
 </style>
+</head>
+<body>
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs id="filters"></defs></svg>
 
@@ -542,3 +549,6 @@ document.getElementById("year").addEventListener("click",e=>{
 });
 render();
 </script>
+
+</body>
+</html>
