@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Chicago Harvest Calendar</title>
-<meta name="description" content="What's in season around Chicago this week, drawn from public-domain USDA pomological watercolors and Vilmorin-Andrieux engravings.">
+<title>Ripe</title>
+<meta name="description" content="What's in season this week around Chicago or in Florida, drawn from public-domain USDA pomological watercolors and Vilmorin-Andrieux engravings.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,400;1,500&family=Gentium+Book+Plus:ital,wght@0,400;0,700;1,400&display=swap">
@@ -87,6 +87,10 @@ button:focus-visible{outline:1px dashed var(--ink);outline-offset:4px}
 /* sections */
 .section{display:flex;flex-direction:column;gap:18px}
 .shead{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 16px;justify-content:center;text-align:center}
+button.shead{width:100%;cursor:pointer}
+.shead .chev{width:7px;height:7px;border-right:1px solid var(--ink-soft);border-bottom:1px solid var(--ink-soft);transform:rotate(45deg) translateY(-3px);transition:transform .2s;align-self:center}
+.collapsed .shead .chev{transform:rotate(-45deg)}
+.collapsed .collage, .collapsed .shead .desc{display:none}
 .shead .count{font-variant:small-caps;letter-spacing:.1em;color:var(--ink-soft);font-size:.9rem}
 .shead .desc{flex-basis:100%;color:var(--ink-soft);font-style:italic;font-size:.95rem}
 .sec-last h2{color:var(--oxblood)}
@@ -149,6 +153,7 @@ button:focus-visible{outline:1px dashed var(--ink);outline-offset:4px}
 .legend .now{background:color-mix(in srgb,var(--ochre) 30%,transparent);height:14px}
 
 /* notes */
+.yearsec{border-top:1px solid var(--rule);padding-top:28px}
 .notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:24px 40px;border-top:1px solid var(--rule);padding-top:28px}
 .notes div{display:flex;flex-direction:column;gap:6px;min-width:0}
 .notes p{font-size:.93rem;color:var(--ink-soft);max-width:62ch}
@@ -227,7 +232,7 @@ button:focus-visible{outline:1px dashed var(--ink);outline-offset:4px}
 
   <main id="board" style="display:flex;flex-direction:column;gap:56px"></main>
 
-  <section class="section" aria-labelledby="yh">
+  <section class="section yearsec" aria-labelledby="yh">
     <div class="shead"><h2 id="yh">The year at a glance</h2><p class="desc">Tap a month to turn the calendar there.</p></div>
     <div class="legend"><span><i class="fresh"></i>in season</span><span><i class="peak"></i>at its best</span><span><i class="storage"></i>local, from storage</span><span><i class="now"></i>this week</span></div>
     <div class="yearwrap"><div class="year" id="year"></div></div>
@@ -362,11 +367,11 @@ const FL_ITEMS = [
  {n:"Kiwi",la:"Actinidia deliciosa · California",img:null,sz:2,k:"fruit",src:"ship",f:[[20,9]],p:[[22,5]],t:CHI_ITEMS.find(x=>x.n==="Kiwi").t}
 ];
 const REGIONS={
-  chi:{name:"Chicago & the near Midwest",items:CHI_ITEMS,
+  chi:{name:"Chicago & the near Midwest",short:"Chicago",items:CHI_ITEMS,
     dates:"They are typical harvest windows for northern Illinois, southwest Michigan and southern Wisconsin, which is what Chicago markets sell, checked against University of Illinois Extension’s <a href=\"https://extension.illinois.edu/sites/default/files/cjmmwhatsinseason.pdf\" rel=\"noopener\"><i>What’s in Season</i></a> chart and A Healthier Michigan’s <a href=\"https://www.ahealthiermichigan.org/stories/food-and-recipes/the-month-by-month-guide-for-when-michigan-produce-is-in-season\" rel=\"noopener\"><i>Month-by-Month Guide</i></a>. Weather moves them a week or two either way, and peaks are fuzzier than starts and ends. The market table is the final word.",
     offH:"Winter",
     off:"From about December to April almost nothing grows outdoors here. “From the cellar” means local crops kept in cold storage. “Shipped in” lists produce grown elsewhere during its own peak, when grocery quality and price are best."},
-  fl:{name:"Florida",items:FL_ITEMS,
+  fl:{name:"Florida",short:"Florida",items:FL_ITEMS,
     dates:"Most come from the Florida Department of Agriculture’s <a href=\"https://ccmedia.fdacs.gov/content/download/16790/file/florida-produce-seasonal-availability-chart.pdf\" rel=\"noopener\"><i>Florida Produce Seasonal Availability Calendar</i></a>, which covers the whole state. A few crops it skips are filled in from its monthly <a href=\"https://ccmedia.fdacs.gov/content/download/16801/file/What%27s%20In%20Season%20For%20the%20Month%20of%20October.pdf\" rel=\"noopener\"><i>What’s in Season</i></a> lists, <a href=\"https://rockledgegardens.com/fresh-from-the-farm/produce-seasonaility-chart/\" rel=\"noopener\">Rockledge Gardens’ seasonality chart</a>, and best estimates. The calendar marks months but not peaks, so “at their best” is an estimate. South Florida tends to run a few weeks earlier than the Panhandle. The market table is the final word.",
     offH:"Summer",
     off:"Florida’s growing season runs roughly October to June. July through September is too hot and wet for most crops, so the local list thins out to mangoes, avocados and muscadines, and “Shipped in” does more of the work. That’s when northern apples, peaches and cherries are at their best."}
@@ -436,16 +441,18 @@ function status(it,i){
   return null;
 }
 
-const state={date:new Date(),filter:"all",open:new Set(),age:1,mode:"system",region:"chi"};
+const state={date:new Date(),filter:"all",open:new Set(),age:1,mode:"system",region:"chi",collapsed:new Set()};
 const store={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}}};
 (()=>{const f=store.get("hc-filter"); if(f) state.filter=f;
   if(store.get("hc-tips")==="1"){document.body.classList.add("tips");document.getElementById("tips").checked=true}
   const a=store.get("hc-age"); if(a!==null&&!isNaN(+a)) state.age=+a;
   const m=store.get("hc-mode"); if(m) state.mode=m;
-  const r=store.get("hc-region"); if(r&&REGIONS[r]) state.region=r;})();
+  const r=store.get("hc-region"); if(r&&REGIONS[r]) state.region=r;
+  try{const c=JSON.parse(store.get("hc-collapsed")||"[]"); if(Array.isArray(c)) state.collapsed=new Set(c)}catch(e){}})();
 function applyRegion(){
   const R=REGIONS[state.region]; ITEMS=R.items;
   document.getElementById("regionName").textContent=R.name;
+  document.title=`Ripe · ${R.short}`;
   document.getElementById("noteDates").innerHTML=R.dates;
   document.getElementById("noteOffH").textContent=R.offH;
   document.getElementById("noteOff").textContent=R.off;
@@ -479,7 +486,7 @@ function plate(it,g,i,slot){
 
 function render(){
   const d=state.date,i=half(d),now=new Date(),isToday=d.toDateString()===now.toDateString();
-  document.getElementById("date").textContent=`${isToday?"This week":"The week"} of ${d.toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"})} · ${halfLabel(i)}`;
+  document.getElementById("date").textContent=`${isToday?"This week":"The week"} of ${d.toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"})}`;
   document.getElementById("today").setAttribute("aria-pressed",isToday);
   document.querySelectorAll("[data-f]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.f===state.filter));
 
@@ -502,7 +509,7 @@ function render(){
     ["soon","Coming soon","Arriving in the next two months."]
   ];
   document.getElementById("board").innerHTML=defs.filter(([g])=>G[g].length).map(([g,title,desc])=>
-    `<section class="section sec-${g}${g==="soon"?" soon":""}"><div class="shead"><h2>${title}</h2><span class="count">${G[g].length}</span><p class="desc">${desc}</p></div>
+    `<section class="section sec-${g}${g==="soon"?" soon":""}${state.collapsed.has(g)?" collapsed":""}"><button type="button" class="shead" data-sec="${g}" aria-expanded="${!state.collapsed.has(g)}"><h2>${title}</h2><span class="count">${G[g].length}</span><span class="chev" aria-hidden="true"></span><p class="desc">${desc}</p></button>
      <div class="collage">${(()=>{const sc=matchMedia("(max-width:560px)").matches?0.72:1, slot=Math.max(...G[g].map(it=>cutH(it.img,Math.round((SIZE[it.sz]||160)*sc))));return G[g].map(it=>plate(it,g,i,slot)).join("")})()}</div></section>`).join("")
     || `<p class="empty">Nothing to show for this filter this week.</p>`;
 
@@ -537,6 +544,11 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape") document.getElement
 document.querySelectorAll("button[data-age]").forEach(b=>b.onclick=()=>{state.age=+b.dataset.age;store.set("hc-age",state.age);applyAge();render()});
 document.querySelectorAll("button[data-mode]").forEach(b=>b.onclick=()=>{state.mode=b.dataset.mode;store.set("hc-mode",state.mode);applyMode()});
 document.getElementById("board").addEventListener("click",e=>{
+  const h=e.target.closest("button[data-sec]");
+  if(h){const g=h.dataset.sec, sec=h.parentElement;
+    if(state.collapsed.has(g)) state.collapsed.delete(g); else state.collapsed.add(g);
+    sec.classList.toggle("collapsed",state.collapsed.has(g)); h.setAttribute("aria-expanded",!state.collapsed.has(g));
+    store.set("hc-collapsed",JSON.stringify([...state.collapsed])); return;}
   const b=e.target.closest("button[data-id]"); if(!b) return;
   const id=b.dataset.id, fig=b.parentElement;
   if(state.open.has(id)) state.open.delete(id); else state.open.add(id);
