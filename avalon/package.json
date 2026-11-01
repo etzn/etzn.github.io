@@ -1,0 +1,6 @@
+{
+  "name": "avalon-party",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node test/game.test.mjs" }
+}
