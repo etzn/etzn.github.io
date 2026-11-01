@@ -20,7 +20,7 @@ function joinForm() {
     <label>Your name<input name="name" maxlength="20" autocomplete="nickname" required value="${esc(saved.name || '')}"></label>
     <label>Room code<input name="room" maxlength="8" autocapitalize="characters" autocomplete="off" required value="${esc(urlRoom || saved.room || '')}"></label>
     <button class="primary wide">Join</button>
-    <p class="muted small">The host opens <code>/admin</code> on their device to get a code.</p>
+    <p class="muted small">The host opens <code>/host</code> on their device to get a code.</p>
   </form>`;
   const f = document.getElementById('join');
   if (urlRoom) f.name.focus();
