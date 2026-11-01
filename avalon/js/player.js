@@ -58,12 +58,15 @@ function start(room, name) {
       clearTimeout(timeout);
       lastMsg = Date.now();
       ui.setStatus('');
-      c.send({ t: 'hello', token: saved.token, name, watch });
+      let gotState = false;
+      const hello = () => { if (conn === c && c.open && !gotState) { c.send({ t: 'hello', token: saved.token, name, watch }); setTimeout(hello, 4000); } };
+      c._gotState = () => { gotState = true; };
+      hello(); // repeats until the host answers, in case the first one was dropped
     });
     c.on('data', (m) => {
       if (conn !== c) return;
       lastMsg = Date.now();
-      if (m.t === 'state') ui.update(m.view);
+      if (m.t === 'state') { if (c._gotState) c._gotState(); ui.update(m.view); }
       else if (m.t === 'ping') c.send({ t: 'pong' });
       else if (m.t === 'error') ui.setError(m.msg);
       else if (m.t === 'kicked') { ui.setStatus('The host removed you from the lobby. Reload to rejoin.'); clearTimeout(retryT); conn = null; c.close(); peer.destroy(); }

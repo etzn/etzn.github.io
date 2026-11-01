@@ -4,16 +4,19 @@
 export const ROLE_INFO = {
   merlin:   { name: 'Merlin', team: 'good', blurb: 'You know who is evil — except Mordred. Guide your side without being obvious: if good wins and the Assassin names you, evil wins anyway.' },
   percival: { name: 'Percival', team: 'good', blurb: 'You can see Merlin. If Morgana is in play she looks identical, so work out which one is real and protect them.' },
+  cleric:   { name: 'Cleric', team: 'good', blurb: 'You know whether the first leader is good or evil.' },
+  troublemaker: { name: 'Troublemaker', team: 'good', blurb: 'You are good, but if the Lady of the Lake examines you, you must show Evil.' },
   servant:  { name: 'Loyal Servant of Arthur', team: 'good', blurb: 'You know nothing except that you are good. Read the room.' },
   assassin: { name: 'Assassin', team: 'evil', blurb: 'If good completes three missions, you get one guess at who Merlin is. Get it right and evil wins.' },
   morgana:  { name: 'Morgana', team: 'evil', blurb: 'To Percival you look exactly like Merlin. Sell it.' },
   mordred:  { name: 'Mordred', team: 'evil', blurb: 'Merlin cannot see you. You are the one evil player Merlin can’t warn anyone about.' },
   oberon:   { name: 'Oberon', team: 'evil', blurb: 'You are evil, but you don’t know the other minions and they don’t know you. Merlin can still see you.' },
+  trickster: { name: 'Trickster', team: 'evil', blurb: 'If the Lady of the Lake examines you, you may show either loyalty.' },
   minion:   { name: 'Minion of Mordred', team: 'evil', blurb: 'You know your fellow minions. Sabotage missions without getting caught.' },
 };
 
-export const GOOD_SPECIALS = ['merlin', 'percival'];
-export const EVIL_SPECIALS = ['assassin', 'morgana', 'mordred', 'oberon'];
+export const GOOD_SPECIALS = ['merlin', 'percival', 'cleric', 'troublemaker'];
+export const EVIL_SPECIALS = ['assassin', 'morgana', 'mordred', 'oberon', 'trickster'];
 export const SPECIAL_ROLES = [...GOOD_SPECIALS, ...EVIL_SPECIALS];
 export const teamOf = (r) => ROLE_INFO[r].team;
 
@@ -31,8 +34,10 @@ export const MAX_PLAYERS = 20;
 
 export function defaultConfig() {
   return {
-    roles: { merlin: true, percival: true, assassin: true, morgana: true, mordred: false, oberon: false },
+    roles: { merlin: true, percival: true, assassin: true, morgana: true, mordred: false, oberon: false, cleric: false, troublemaker: false, trickster: false },
     lady: false,
+    excalibur: false,
+    targeting: false,
     trackVotes: true,
     hostPlays: true,
     hostName: 'Host',
@@ -85,6 +90,7 @@ export function validate(n, config) {
   if (R.percival && !R.merlin) warn('Percival without Merlin has nobody to see.');
   if (R.morgana && !R.percival) warn('Morgana’s disguise only matters to Percival; without him she’s a plain minion.');
   if (R.mordred && !R.merlin) warn('Mordred’s power is hiding from Merlin; without Merlin he’s a plain minion.');
+  if ((R.trickster || R.troublemaker) && !config.lady) warn('The Trickster and Troublemaker only matter when the Lady of the Lake is on.');
   return out;
 }
 
@@ -124,11 +130,11 @@ export function startGame(S, config, rng = Math.random) {
   if (errors.length) throw new Error(errors.map((e) => e.msg).join(' '));
   const cfg = JSON.parse(JSON.stringify(config));
   const s = getSetup(n, cfg);
+  const goodSp = GOOD_SPECIALS.filter((r) => cfg.roles[r]);
+  const evilSp = EVIL_SPECIALS.filter((r) => cfg.roles[r]);
   const deck = [
-    ...GOOD_SPECIALS.filter((r) => cfg.roles[r]),
-    ...Array(n - s.evil - GOOD_SPECIALS.filter((r) => cfg.roles[r]).length).fill('servant'),
-    ...EVIL_SPECIALS.filter((r) => cfg.roles[r]),
-    ...Array(s.evil - EVIL_SPECIALS.filter((r) => cfg.roles[r]).length).fill('minion'),
+    ...goodSp, ...Array(n - s.evil - goodSp.length).fill('servant'),
+    ...evilSp, ...Array(s.evil - evilSp.length).fill('minion'),
   ];
   shuffle(deck, rng);
   const roles = Object.fromEntries(ids.map((id, i) => [id, deck[i]]));
@@ -139,10 +145,14 @@ export function startGame(S, config, rng = Math.random) {
   S.game = {
     id: Math.floor(rng() * 1e9).toString(36) + Date.now().toString(36),
     config: cfg, setup: s, roles, rolesInPlay,
-    leader, round: 0, rejections: 0, phase: 'propose',
+    leader, firstLeader: ids[leader],
+    round: 0,          // missions completed so far
+    target: null,      // index of the mission being attempted (set when a team is proposed)
+    rejections: 0, phase: 'propose',
     missions: s.sizes.map((size, i) => ({ size, need: i === s.doubleFail ? 2 : 1, result: null, fails: null })),
-    team: [], votes: {}, cards: { submitted: [], fails: 0 },
-    lady: cfg.lady ? { holder: ladyHolder, used: [ladyHolder], log: [] } : null,
+    team: [], excalibur: null, votes: {}, cards: { submitted: [], by: {} },
+    lady: cfg.lady ? { holder: ladyHolder, used: [ladyHolder], log: [], pending: null } : null,
+    excaliburLog: [],
     history: [], lastEvent: null, eventSeq: 0,
     winner: null, reason: null, assassinTarget: null,
   };
@@ -153,6 +163,13 @@ const ids = (S) => S.players.map((p) => p.id);
 const leaderId = (S) => ids(S)[S.game.leader];
 const roleHolder = (G, role) => Object.keys(G.roles).find((k) => G.roles[k] === role) || null;
 const inPlay = (G, role) => !!G.rolesInPlay[role];
+const wins = (G) => G.missions.filter((x) => x.result === 'success').length;
+export const nextMission = (G) => G.missions.findIndex((m) => !m.result);
+
+// Missions the leader may pick under Targeting (all unplayed; #5 locked until two successes).
+export function openMissions(G) {
+  return G.missions.map((m, i) => i).filter((i) => !G.missions[i].result && (i !== 4 || wins(G) >= 2));
+}
 
 function event(G, e) { G.eventSeq += 1; G.lastEvent = { ...e, seq: G.eventSeq }; }
 function end(G, winner, reason) { G.phase = 'over'; G.winner = winner; G.reason = reason; }
@@ -163,36 +180,54 @@ function resolveVote(S, approvedOverride) {
   const yes = Object.values(G.votes).filter(Boolean).length;
   const approved = approvedOverride ?? yes * 2 > n; // strict majority; ties fail
   const votes = G.config.trackVotes ? { ...G.votes } : null;
-  G.history.push({ round: G.round, leader: leaderId(S), team: [...G.team], votes, approved, attempt: G.rejections + 1 });
-  event(G, { kind: 'vote', approved, votes, team: [...G.team], leader: leaderId(S), round: G.round });
+  const rec = { mission: G.target, leader: leaderId(S), team: [...G.team], excalibur: G.excalibur, votes, approved, attempt: G.rejections + 1 };
+  G.history.push(rec);
+  event(G, { kind: 'vote', ...rec });
   G.votes = {};
   if (approved) {
     G.phase = 'mission';
-    G.cards = { submitted: [], fails: 0 };
+    G.cards = { submitted: [], by: {} };
   } else {
     G.rejections += 1;
-    G.team = [];
+    G.team = []; G.excalibur = null; G.target = null;
     if (G.rejections >= 5) return end(G, 'evil', 'Five team proposals in a row were rejected.');
     nextLeader(S);
     G.phase = 'propose';
   }
 }
 
-function resolveMission(S) {
-  const G = S.game, m = G.missions[G.round];
-  m.fails = G.cards.fails;
+function resolveMission(S, excaliburUse) {
+  const G = S.game, m = G.missions[G.target];
+  m.fails = Object.values(G.cards.by).filter(Boolean).length;
   m.result = m.fails >= m.need ? 'fail' : 'success';
-  event(G, { kind: 'mission', round: G.round, fails: m.fails, result: m.result, need: m.need, size: G.team.length });
-  G.round += 1; G.rejections = 0; G.team = []; G.cards = { submitted: [], fails: 0 };
+  event(G, { kind: 'mission', mission: G.target, fails: m.fails, result: m.result, need: m.need, size: G.team.length, excalibur: excaliburUse || null });
+  // forget who played what: only the count survives
+  G.round += 1; G.rejections = 0; G.team = []; G.excalibur = null; G.target = null; G.cards = { submitted: [], by: {} };
   nextLeader(S);
-  const wins = G.missions.filter((x) => x.result === 'success').length;
   const losses = G.missions.filter((x) => x.result === 'fail').length;
   if (losses >= 3) return end(G, 'evil', 'Three missions failed.');
-  if (wins >= 3) {
+  if (wins(G) >= 3) {
     if (inPlay(G, 'merlin') && inPlay(G, 'assassin')) { G.phase = 'assassin'; return; }
     return end(G, 'good', 'Three missions succeeded.');
   }
   G.phase = G.lady && G.round >= 2 && G.round <= 4 ? 'lady' : 'propose';
+}
+
+function finishLady(S, shown) {
+  const G = S.game, { by, target } = G.lady.pending;
+  G.lady.log.push({ by, target, team: shown, round: G.round });
+  G.lady.used.push(target);
+  G.lady.holder = target;
+  G.lady.pending = null;
+  event(G, { kind: 'lady', by, target });
+  G.phase = 'propose';
+}
+
+// What loyalty a player is allowed to show the Lady of the Lake.
+export function ladyOptions(role) {
+  if (role === 'trickster') return ['good', 'evil'];
+  if (role === 'troublemaker') return ['evil'];
+  return [teamOf(role)];
 }
 
 // Every player-originated action goes through here. `actor` is the player id the
@@ -209,10 +244,21 @@ export function act(S, actor, a) {
     case 'propose': {
       need(G.phase === 'propose', 'Not proposing right now.');
       need(actor === leaderId(S), 'Only the leader can propose a team.');
+      const idx = G.config.targeting ? Number(a.mission) : nextMission(G);
+      need(Number.isInteger(idx) && idx >= 0 && idx < 5 && !G.missions[idx].result, 'Pick a mission that hasn’t been played.');
+      need(!(G.config.targeting && idx === 4 && wins(G) < 2), 'Mission 5 unlocks after two successful missions.');
+      const size = G.missions[idx].size;
       const team = [...new Set(a.team || [])];
       need(team.every(isPlayer), 'Unknown player in team.');
-      need(team.length === G.missions[G.round].size, `Team must have exactly ${G.missions[G.round].size} players.`);
+      need(team.length === size, `Team must have exactly ${size} players.`);
+      let ex = null;
+      if (G.config.excalibur) {
+        const eligible = team.filter((id) => id !== actor);
+        if (eligible.length) { need(eligible.includes(a.excalibur), 'Give Excalibur to a team member other than yourself.'); ex = a.excalibur; }
+      }
+      G.target = idx;
       G.team = ids(S).filter((id) => team.includes(id)); // keep seat order
+      G.excalibur = ex;
       G.votes = {};
       G.phase = 'vote';
       return;
@@ -237,20 +283,39 @@ export function act(S, actor, a) {
       need(!G.cards.submitted.includes(actor), 'You already played a card.');
       need(!(a.fail && teamOf(G.roles[actor]) === 'good'), 'Good players can only play Success.');
       G.cards.submitted.push(actor);
-      if (a.fail) G.cards.fails += 1; // only the count is kept, not who
-      if (G.cards.submitted.length === G.team.length) resolveMission(S);
+      G.cards.by[actor] = !!a.fail;
+      if (G.cards.submitted.length === G.team.length) {
+        if (G.excalibur) G.phase = 'excalibur';
+        else resolveMission(S);
+      }
       return;
+    }
+    case 'excalibur': {
+      need(G.phase === 'excalibur', 'Excalibur isn’t in play right now.');
+      need(actor === G.excalibur, 'You don’t hold Excalibur.');
+      if (a.target == null) return resolveMission(S, { by: actor, target: null });
+      need(G.team.includes(a.target) && a.target !== actor, 'Pick another member of the team.');
+      const original = G.cards.by[a.target];
+      G.cards.by[a.target] = !original;
+      G.excaliburLog.push({ mission: G.target, by: actor, target: a.target, original: original ? 'fail' : 'success' });
+      return resolveMission(S, { by: actor, target: a.target });
     }
     case 'lady': {
       need(G.phase === 'lady' && G.lady, 'The Lady of the Lake isn’t active.');
       need(actor === G.lady.holder, 'You don’t hold the Lady of the Lake.');
       need(isPlayer(a.target) && a.target !== actor, 'Pick another player.');
       need(!G.lady.used.includes(a.target), 'That player has already held the Lady.');
-      G.lady.log.push({ by: actor, target: a.target, team: teamOf(G.roles[a.target]), round: G.round });
-      G.lady.used.push(a.target);
-      G.lady.holder = a.target;
-      event(G, { kind: 'lady', by: actor, target: a.target });
-      G.phase = 'propose';
+      G.lady.pending = { by: actor, target: a.target };
+      // With liars in the game, the examined player picks the card they show.
+      if (inPlay(G, 'trickster') || inPlay(G, 'troublemaker')) G.phase = 'ladyReveal';
+      else finishLady(S, teamOf(G.roles[a.target]));
+      return;
+    }
+    case 'ladyShow': {
+      need(G.phase === 'ladyReveal' && G.lady && G.lady.pending, 'Nobody is being examined.');
+      need(actor === G.lady.pending.target, 'You are not the one being examined.');
+      need(ladyOptions(G.roles[actor]).includes(a.show), 'You can’t show that loyalty.');
+      finishLady(S, a.show);
       return;
     }
     case 'assassinate': {
@@ -267,7 +332,7 @@ export function act(S, actor, a) {
   }
 }
 
-export function nightInfo(pid, roles) {
+export function nightInfo(pid, roles, ctx = {}) {
   const r = roles[pid];
   const others = Object.keys(roles).filter((x) => x !== pid);
   const has = (x) => Object.values(roles).includes(x);
@@ -286,12 +351,21 @@ export function nightInfo(pid, roles) {
       notes: [],
     };
   }
+  if (r === 'cleric' && ctx.firstLeader) {
+    const fl = ctx.firstLeader;
+    if (fl === pid) return { label: null, seen: [], notes: ['You are the first leader yourself, so your vision shows you nothing new.'] };
+    return { label: `The first leader is ${teamOf(roles[fl]) === 'good' ? 'GOOD' : 'EVIL'}`, seen: [fl], notes: [] };
+  }
+  if (r === 'troublemaker') return { label: null, seen: [], notes: ['If the Lady examines you, the app will only let you show Evil.'] };
   if (r === 'oberon') return { label: null, seen: [], notes: ['You don’t know the other evil players, and they don’t know you.'] };
   if (teamOf(r) === 'evil') {
+    const notes = [];
+    if (has('oberon')) notes.push('Oberon is also evil, but hidden from you (and you from him).');
+    if (r === 'trickster') notes.push('If the Lady examines you, you choose which loyalty to show.');
     return {
       label: 'Your fellow servants of Mordred',
       seen: others.filter((o) => evil(o) && roles[o] !== 'oberon'),
-      notes: has('oberon') ? ['Oberon is also evil, but hidden from you (and you from him).'] : [],
+      notes,
     };
   }
   return { label: null, seen: [], notes: [] };
@@ -310,12 +384,17 @@ export function viewFor(S, pid, connected = new Set()) {
   const assassinVisible = G.phase === 'assassin' || G.phase === 'over';
   v.game = {
     id: G.id, phase: G.phase, round: G.round, missions: G.missions, rejections: G.rejections,
+    missionIdx: G.target ?? (G.config.targeting ? null : nextMission(G)),
+    openMissions: G.config.targeting ? openMissions(G) : null,
+    targeting: !!G.config.targeting, excaliburOn: !!G.config.excalibur, excalibur: G.excalibur,
+    excaliburLog: G.excaliburLog.map((e) => ({ mission: e.mission, by: e.by, target: e.target, original: e.by === pid ? e.original : undefined })),
     leaderId: leaderId(S), team: G.team, trackVotes: G.config.trackVotes,
     voted: Object.keys(G.votes), cardsIn: G.cards.submitted,
     lady: G.lady ? {
-      holder: G.lady.holder, used: G.lady.used,
+      holder: G.lady.holder, used: G.lady.used, pending: G.lady.pending,
       log: G.lady.log.map((e) => ({ by: e.by, target: e.target, round: e.round, team: e.by === pid ? e.team : undefined })),
     } : null,
+    liars: inPlay(G, 'trickster') || inPlay(G, 'troublemaker'),
     history: G.history, lastEvent: G.lastEvent,
     winner: G.winner, reason: G.reason, assassinTarget: G.assassinTarget,
     assassinId: assassinVisible ? roleHolder(G, 'assassin') : null,
@@ -325,9 +404,10 @@ export function viewFor(S, pid, connected = new Set()) {
   if (isPlayer) {
     const role = G.roles[pid];
     v.mine = {
-      role, team: teamOf(role), info: nightInfo(pid, G.roles),
+      role, team: teamOf(role), info: nightInfo(pid, G.roles, { firstLeader: G.firstLeader }),
       myVote: pid in G.votes ? G.votes[pid] : null,
       cardPlayed: G.cards.submitted.includes(pid),
+      ladyOptions: ladyOptions(role),
     };
   }
   return v;

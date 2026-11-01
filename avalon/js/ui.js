@@ -4,25 +4,36 @@ import { ROLE_INFO } from './game.js';
 import { store } from './net.js';
 
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const ROLE_ORDER = ['merlin', 'percival', 'servant', 'assassin', 'morgana', 'mordred', 'oberon', 'minion'];
+const ROLE_ORDER = ['merlin', 'percival', 'cleric', 'troublemaker', 'servant', 'assassin', 'morgana', 'mordred', 'oberon', 'trickster', 'minion'];
 
 export function createPlayerUI(root, send, { seenKey = 'avalon.seen', isHost = false } = {}) {
-  const L = { view: null, sel: new Set(), selKey: '', card: null, kill: null, revealed: false, seen: store.get(seenKey, { gid: null, seq: 0 }), status: '', error: '', errTimer: 0, busy: '' };
+  const L = { view: null, sel: new Set(), selKey: '', card: null, kill: null, mission: null, excal: null, revealed: false, seen: store.get(seenKey, { gid: null, seq: 0 }), status: '', error: '', errTimer: 0, busy: '' };
 
   root.addEventListener('click', (e) => {
     const b = e.target.closest('[data-a]');
     if (!b || b.disabled) return;
     const a = b.dataset.a, x = b.dataset.x, g = L.view && L.view.game;
     // one-shot actions lock until the host answers, so double-taps don't double-send
-    if (['propose', 'play', 'lady', 'killgo', 'mark'].includes(a)) { if (L.busy === L.selKey) return; L.busy = L.selKey; }
+    if (['propose', 'play', 'lady', 'killgo', 'mark', 'exgo', 'show'].includes(a)) { if (L.busy === L.selKey) return; L.busy = L.selKey; }
     switch (a) {
       case 'reveal': L.revealed = !L.revealed; break;
       case 'pick': {
-        const size = g.missions[g.round].size;
-        if (L.sel.has(x)) L.sel.delete(x); else if (L.sel.size < size) L.sel.add(x);
+        const idx = curMission(g); if (idx == null) break;
+        const size = g.missions[idx].size;
+        if (L.sel.has(x)) { L.sel.delete(x); if (L.excal === x) L.excal = null; } else if (L.sel.size < size) L.sel.add(x);
         break;
       }
-      case 'propose': send({ type: 'propose', team: [...L.sel] }); break;
+      case 'mpick': {
+        L.mission = +x;
+        const size = g.missions[L.mission].size;
+        while (L.sel.size > size) { const last = [...L.sel].pop(); L.sel.delete(last); if (L.excal === last) L.excal = null; }
+        break;
+      }
+      case 'expick': L.excal = x; break;
+      case 'propose': send({ type: 'propose', team: [...L.sel], mission: curMission(g), excalibur: L.excal }); break;
+      case 'exsel': L.exTarget = x; break;
+      case 'exgo': send({ type: 'excalibur', target: x === 'none' ? null : L.exTarget }); break;
+      case 'show': send({ type: 'ladyShow', show: x }); break;
       case 'vote': send({ type: 'vote', approve: x === '1' }); break;
       case 'mark': send({ type: 'markVote', approved: x === '1' }); break;
       case 'card': L.card = x; break;
@@ -39,7 +50,7 @@ export function createPlayerUI(root, send, { seenKey = 'avalon.seen', isHost = f
     L.view = view;
     const g = view.game;
     const key = g ? `${g.round}-${g.leaderId}-${g.rejections}-${g.phase}` : 'lobby';
-    if (key !== L.selKey) { L.selKey = key; L.sel.clear(); L.card = null; L.kill = null; }
+    if (key !== L.selKey) { L.selKey = key; L.sel.clear(); L.card = null; L.kill = null; L.mission = null; L.excal = null; L.exTarget = null; }
     if (!g) { L.revealed = false; }
     if (g && L.seen.gid !== g.id) { L.seen = { gid: g.id, seq: 0 }; store.set(seenKey, L.seen); }
     render();
@@ -63,6 +74,9 @@ export function createPlayerUI(root, send, { seenKey = 'avalon.seen', isHost = f
     paint(h);
   }
 
+  // mission being proposed/played: fixed by the host, or the leader's pick under Targeting
+  const curMission = (g) => (g.missionIdx != null ? g.missionIdx : L.mission);
+  const mName = (i) => `Mission ${i + 1}`;
   const name = (v, id) => esc((v.players.find((p) => p.id === id) || {}).name || '?');
   const names = (v, list) => list.map((id) => `<b>${name(v, id)}</b>`).join(', ') || '<i>nobody</i>';
 
@@ -85,7 +99,7 @@ export function createPlayerUI(root, send, { seenKey = 'avalon.seen', isHost = f
     const pips = [0, 1, 2, 3, 4].map((i) => `<span class="pip ${i < g.rejections ? 'on' : ''} ${i === 4 ? 'last' : ''}"></span>`).join('');
     return `<section class="board">
       <div class="missions">${g.missions.map((m, i) => `
-        <div class="mission ${m.result || ''} ${i === g.round && !['over', 'assassin'].includes(g.phase) ? 'current' : ''}">
+        <div class="mission ${m.result || ''} ${i === g.missionIdx && !['over', 'assassin'].includes(g.phase) ? 'current' : ''} ${g.phase === 'propose' && g.openMissions && g.openMissions.includes(i) ? 'avail' : ''} ${g.targeting && i === 4 && !m.result && g.openMissions && !g.openMissions.includes(4) ? 'locked' : ''}">
           <span class="size">${m.size}</span>
           ${m.result ? `<span class="res">${m.result === 'success' ? '✓' : `${m.fails}✗`}</span>` : m.need > 1 ? '<span class="need">2 fails</span>' : ''}
         </div>`).join('')}</div>
@@ -97,7 +111,8 @@ export function createPlayerUI(root, send, { seenKey = 'avalon.seen', isHost = f
   function roleCard(v) {
     const m = v.mine, info = ROLE_INFO[m.role], g = v.game;
     if (!L.revealed) return `<section class="role closed"><button class="ghost wide" data-a="reveal">Tap to see your role</button></section>`;
-    const lady = (g.lady ? g.lady.log : []).filter((e) => e.team).map((e) => `<p>🌊 Lady of the Lake: <b>${name(v, e.target)}</b> is <span class="${e.team}">${e.team.toUpperCase()}</span>.</p>`).join('');
+    const lady = (g.lady ? g.lady.log : []).filter((e) => e.team).map((e) => `<p>🌊 Lady of the Lake: <b>${name(v, e.target)}</b> showed <span class="${e.team}">${e.team.toUpperCase()}</span>${g.liars ? ' <span class="muted small">(could be a lie)</span>' : ''}.</p>`).join('')
+      + g.excaliburLog.filter((e) => e.original).map((e) => `<p>⚔ Excalibur, ${mName(e.mission)}: <b>${name(v, e.target)}</b> had played <span class="${e.original === 'success' ? 'good' : 'evil'}">${e.original.toUpperCase()}</span> (you flipped it).</p>`).join('');
     return `<section class="role open ${m.team}" data-a="reveal">
       <div class="role-head"><h2>${esc(info.name)}</h2><span class="badge ${m.team}">${m.team}</span></div>
       <p>${esc(info.blurb)}</p>
@@ -109,23 +124,40 @@ export function createPlayerUI(root, send, { seenKey = 'avalon.seen', isHost = f
   }
 
   function panel(v) {
-    const g = v.game, me = v.me, M = g.missions[g.round];
+    const g = v.game, me = v.me, idx = curMission(g), M = idx != null ? g.missions[idx] : null;
+    const exNote = g.excalibur ? ` <span class="muted">⚔ Excalibur: <b>${name(v, g.excalibur)}</b></span>` : '';
     const isLeader = me && me === g.leaderId;
     let h = '';
     switch (g.phase) {
       case 'propose': {
         const warn = g.rejections === 4 ? '<p class="warn">Fifth proposal: if this team is rejected, evil wins.</p>' : '';
         if (isLeader) {
-          h = `<h2>👑 You’re the leader</h2><p>Pick <b>${M.size}</b> players for Mission ${g.round + 1}${M.need > 1 ? ' (needs 2 fails to fail)' : ''}.</p>${warn}
-            <div class="picks">${v.players.map((p) => `<button class="pick ${L.sel.has(p.id) ? 'on' : ''}" data-a="pick" data-x="${esc(p.id)}">${esc(p.name)}${p.id === me ? ' (you)' : ''}</button>`).join('')}</div>
-            <button class="primary wide" data-a="propose" ${L.sel.size === M.size ? '' : 'disabled'}>Propose team (${L.sel.size}/${M.size})</button>`;
+          h = `<h2>👑 You’re the leader</h2>${warn}`;
+          if (g.targeting) {
+            h += `<p>Choose which mission to attempt${g.openMissions.includes(4) ? '' : ' (Mission 5 unlocks after two successes)'}:</p>
+              <div class="picks missions-pick">${g.openMissions.map((i) => `<button class="pick ${L.mission === i ? 'on' : ''}" data-a="mpick" data-x="${i}">${mName(i)} · ${g.missions[i].size} players${g.missions[i].need > 1 ? ' · 2 fails' : ''}</button>`).join('')}</div>`;
+          }
+          if (M) {
+            const exEligible = [...L.sel].filter((id) => id !== me);
+            const needEx = g.excaliburOn && exEligible.length > 0;
+            const ready = L.sel.size === M.size && (!needEx || (L.excal && L.sel.has(L.excal)));
+            h += `<p>Pick <b>${M.size}</b> players for ${mName(idx)}${M.need > 1 ? ' (needs 2 fails to fail)' : ''}.</p>
+              <div class="picks">${v.players.map((p) => `<button class="pick ${L.sel.has(p.id) ? 'on' : ''}" data-a="pick" data-x="${esc(p.id)}">${esc(p.name)}${p.id === me ? ' (you)' : ''}</button>`).join('')}</div>`;
+            if (g.excaliburOn) {
+              h += `<p class="small">⚔ Give Excalibur to a team member (not yourself). After the cards are played, they may secretly flip one other teammate’s card.</p>
+                <div class="picks">${exEligible.length ? exEligible.map((id) => `<button class="pick ex ${L.excal === id ? 'on' : ''}" data-a="expick" data-x="${esc(id)}">⚔ ${name(v, id)}</button>`).join('') : '<span class="muted small">Pick your team first.</span>'}</div>`;
+            }
+            h += `<button class="primary wide" data-a="propose" ${ready ? '' : 'disabled'}>Propose team (${L.sel.size}/${M.size})</button>`;
+          }
         } else {
-          h = `<h2>Mission ${g.round + 1}</h2><p><b>${name(v, g.leaderId)}</b> is choosing ${M.size} players.</p>${warn}`;
+          h = g.targeting
+            ? `<h2>Choosing a mission</h2><p><b>${name(v, g.leaderId)}</b> is choosing which mission to attempt and who goes.</p>${warn}`
+            : `<h2>${mName(idx)}</h2><p><b>${name(v, g.leaderId)}</b> is choosing ${M.size} players.</p>${warn}`;
         }
         break;
       }
       case 'vote': {
-        h = `<h2>Vote on the team</h2><p>${name(v, g.leaderId)} proposes: ${names(v, g.team)}</p>`;
+        h = `<h2>Vote: ${mName(idx)}</h2><p>${name(v, g.leaderId)} proposes: ${names(v, g.team)}${exNote}</p>`;
         if (g.rejections === 4) h += '<p class="warn">Fifth proposal: if rejected, evil wins.</p>';
         if (g.trackVotes) {
           if (me) {
@@ -143,7 +175,7 @@ export function createPlayerUI(root, send, { seenKey = 'avalon.seen', isHost = f
       }
       case 'mission': {
         const onTeam = me && g.team.includes(me);
-        h = `<h2>Mission ${g.round + 1}</h2><p>Team: ${names(v, g.team)}</p>`;
+        h = `<h2>${mName(idx)}</h2><p>Team: ${names(v, g.team)}${exNote}</p>`;
         if (onTeam && !v.mine.cardPlayed) {
           const good = v.mine.team === 'good';
           h += `<div class="row"><button class="big approve ${L.card === 'success' ? 'on' : ''}" data-a="card" data-x="success">Success</button>
@@ -154,6 +186,29 @@ export function createPlayerUI(root, send, { seenKey = 'avalon.seen', isHost = f
           h += '<p class="muted">Card played. Waiting for the rest of the team…</p>';
         }
         h += `<p class="muted">${g.cardsIn.length}/${g.team.length} cards played</p>`;
+        break;
+      }
+      case 'excalibur': {
+        if (me === g.excalibur) {
+          const others = g.team.filter((id) => id !== me);
+          h = `<h2>⚔ Excalibur</h2><p>All cards are in. You may secretly flip one teammate’s card (Success ↔ Fail). You’ll see what they originally played. Everyone will see whose card you chose.</p>
+            <div class="picks">${others.map((id) => `<button class="pick ${L.exTarget === id ? 'on' : ''}" data-a="exsel" data-x="${esc(id)}">${name(v, id)}</button>`).join('')}</div>
+            <div class="row"><button class="ghost big" data-a="exgo" data-x="none">Don’t use it</button><button class="primary big" data-a="exgo" data-x="use" ${L.exTarget ? '' : 'disabled'}>Flip ${L.exTarget ? name(v, L.exTarget) + '’s card' : ''}</button></div>`;
+        } else {
+          h = `<h2>⚔ Excalibur</h2><p>All cards are in. <b>${name(v, g.excalibur)}</b> may secretly flip one other teammate’s card before they’re revealed.</p>`;
+        }
+        break;
+      }
+      case 'ladyReveal': {
+        const pend = g.lady.pending;
+        if (me === pend.target) {
+          const opts = v.mine.ladyOptions;
+          h = `<h2>🌊 You’re being examined</h2><p><b>${name(v, pend.by)}</b> is using the Lady of the Lake on you. Show your loyalty:</p>
+            <div class="row">${['good', 'evil'].map((t) => `<button class="big ${t === 'good' ? 'approve' : 'reject'}" data-a="show" data-x="${t}" ${opts.includes(t) ? '' : 'disabled'}>${t === 'good' ? 'Good' : 'Evil'}</button>`).join('')}</div>
+            <p class="muted small">${opts.length > 1 ? 'As the Trickster, you may show either.' : v.mine.role === 'troublemaker' ? 'As the Troublemaker, you must show Evil.' : 'You must show your true loyalty.'}</p>`;
+        } else {
+          h = `<h2>🌊 Lady of the Lake</h2><p><b>${name(v, pend.target)}</b> is showing their loyalty to <b>${name(v, pend.by)}</b>.</p>`;
+        }
         break;
       }
       case 'lady': {
@@ -196,6 +251,7 @@ export function createPlayerUI(root, send, { seenKey = 'avalon.seen', isHost = f
       if (p.id === g.leaderId && g.phase !== 'over') tags.push('<span title="Leader">👑</span>');
       if (g.lady && g.lady.holder === p.id && g.phase !== 'over') tags.push('<span title="Lady of the Lake">🌊</span>');
       if (g.team.includes(p.id)) tags.push('<span class="tag team">on team</span>');
+      if (g.excalibur === p.id) tags.push('<span title="Excalibur">⚔</span>');
       if (g.phase === 'vote' && g.voted.includes(p.id)) tags.push('<span class="tag">voted</span>');
       if (g.phase === 'mission' && g.cardsIn.includes(p.id)) tags.push('<span class="tag">played</span>');
       if (!p.connected) tags.push('<span class="tag off">offline</span>');
@@ -205,12 +261,13 @@ export function createPlayerUI(root, send, { seenKey = 'avalon.seen', isHost = f
 
   function history(v) {
     const g = v.game;
-    if (!g.history.length && !(g.lady && g.lady.log.length)) return '';
+    if (!g.history.length && !(g.lady && g.lady.log.length) && !g.excaliburLog.length) return '';
     const rows = g.history.slice().reverse().map((h) => {
       const votes = h.votes ? `<div class="votes">${v.players.map((p) => `<span class="${h.votes[p.id] ? 'yes' : 'no'}">${esc(p.name)}</span>`).join('')}</div>` : '';
-      return `<li><div><b>M${h.round + 1}.${h.attempt}</b> ${name(v, h.leader)} → ${names(v, h.team)} <span class="${h.approved ? 'good' : 'evil'}">${h.approved ? 'approved' : 'rejected'}</span></div>${votes}</li>`;
+      return `<li><div><b>M${h.mission + 1}.${h.attempt}</b> ${name(v, h.leader)} → ${names(v, h.team)}${h.excalibur ? ` (⚔ ${name(v, h.excalibur)})` : ''} <span class="${h.approved ? 'good' : 'evil'}">${h.approved ? 'approved' : 'rejected'}</span></div>${votes}</li>`;
     }).join('');
-    const lady = g.lady ? g.lady.log.map((e) => `<li>🌊 ${name(v, e.by)} examined ${name(v, e.target)}</li>`).join('') : '';
+    const lady = (g.lady ? g.lady.log.map((e) => `<li>🌊 ${name(v, e.by)} examined ${name(v, e.target)}</li>`).join('') : '')
+      + g.excaliburLog.map((e) => `<li>⚔ ${name(v, e.by)} flipped ${name(v, e.target)}’s card on ${mName(e.mission)}</li>`).join('');
     return `<details class="card"><summary>History</summary><ul class="hist">${lady}${rows}</ul></details>`;
   }
 
@@ -220,17 +277,21 @@ export function createPlayerUI(root, send, { seenKey = 'avalon.seen', isHost = f
     let body = '';
     if (e.kind === 'vote') {
       body = `<h2 class="${e.approved ? 'good' : 'evil'}">Team ${e.approved ? 'approved' : 'rejected'}</h2>
-        <p>${name(v, e.leader)}’s team: ${names(v, e.team)}</p>
+        <p>${name(v, e.leader)}’s team for ${mName(e.mission)}: ${names(v, e.team)}${e.excalibur ? ` (⚔ ${name(v, e.excalibur)})` : ''}</p>
         ${e.votes ? `<div class="votes big">${v.players.map((p) => `<span class="${e.votes[p.id] ? 'yes' : 'no'}">${esc(p.name)} ${e.votes[p.id] ? '✓' : '✗'}</span>`).join('')}</div>` : ''}`;
     } else if (e.kind === 'mission') {
       const cards = Array.from({ length: e.size }, (_, i) => `<span class="mcard ${i < e.fails ? 'f' : 's'}" style="animation-delay:${i * 0.35}s">${i < e.fails ? 'FAIL' : 'OK'}</span>`);
-      body = `<h2 class="${e.result === 'success' ? 'good' : 'evil'}">Mission ${e.round + 1} ${e.result === 'success' ? 'succeeded' : 'failed'}</h2>
+      const ex = e.excalibur;
+      const exMine = ex && ex.target && g.excaliburLog.find((x) => x.mission === e.mission && x.original);
+      body = `<h2 class="${e.result === 'success' ? 'good' : 'evil'}">${mName(e.mission)} ${e.result === 'success' ? 'succeeded' : 'failed'}</h2>
         <div class="mcards">${cards.join('')}</div>
-        <p>${e.fails} fail card${e.fails === 1 ? '' : 's'}${e.need > 1 ? ' (2 needed to fail)' : ''}</p>`;
+        <p>${e.fails} fail card${e.fails === 1 ? '' : 's'}${e.need > 1 ? ' (2 needed to fail)' : ''}</p>
+        ${ex ? `<p class="muted">⚔ ${ex.target ? `${name(v, ex.by)} used Excalibur on ${name(v, ex.target)}’s card.` : `${name(v, ex.by)} kept Excalibur sheathed.`}</p>` : ''}
+        ${exMine ? `<p class="lady-res small">${name(v, ex.target)} had played <span class="${exMine.original === 'success' ? 'good' : 'evil'}">${exMine.original.toUpperCase()}</span></p><p class="muted small">Only you can see this.</p>` : ''}`;
     } else if (e.kind === 'lady') {
       const mine = g.lady && g.lady.log.find((x) => x.by === v.me && x.target === e.target && x.team);
       body = `<h2>🌊 Lady of the Lake</h2><p>${name(v, e.by)} examined ${name(v, e.target)}.</p>
-        ${mine ? `<p class="lady-res">${name(v, e.target)} is <span class="${mine.team}">${mine.team.toUpperCase()}</span></p><p class="muted small">Only you can see this.</p>` : ''}`;
+        ${mine ? `<p class="lady-res">${name(v, e.target)} showed <span class="${mine.team}">${mine.team.toUpperCase()}</span></p><p class="muted small">Only you can see this.${g.liars ? ' A Trickster or Troublemaker is in this game, so it could be a lie.' : ''}</p>` : ''}`;
     }
     return `<div class="overlay"><div class="modal">${body}<button class="primary wide" data-a="dismiss">OK</button></div></div>`;
   }

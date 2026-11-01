@@ -107,6 +107,9 @@ legend { padding: 0 6px; color: var(--muted); font-size: 13px; text-transform: u
 .mission .size { font-family: var(--serif); font-size: 24px; font-weight: 700; line-height: 1; }
 .mission .need { font-size: 9.5px; color: var(--warn); text-transform: uppercase; letter-spacing: .04em; margin-top: 2px; }
 .mission .res { font-size: 12px; font-weight: 600; margin-top: 2px; }
+.mission.avail { border-style: dashed; border-color: var(--gold); }
+.mission.locked { opacity: .45; }
+.pick.ex.on { background: #c9c3d6; border-color: #c9c3d6; color: #15121a; }
 .mission.current { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(214,171,82,.18); }
 .mission.success { background: var(--good-bg); border-color: var(--good); }
 .mission.success .size { color: var(--good); }
@@ -184,3 +187,4 @@ legend { padding: 0 6px; color: var(--muted); font-size: 13px; text-transform: u
 .code { font-family: var(--serif); font-size: 40px; letter-spacing: .14em; color: var(--gold); line-height: 1.1; }
 .net { margin: 6px 0; font-size: 14px; }
 @media (max-width: 420px) { .roomgrid { grid-template-columns: 1fr; } .qr { max-width: 200px; } }
+.missions-pick .pick { white-space: normal; line-height: 1.25; }

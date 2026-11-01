@@ -52,6 +52,16 @@ own too. After a host refresh the room code can take up to a minute to free up o
 - Lady of the Lake after missions 2, 3 and 4, starting with the player to the first leader's right. A player who
   has held it can't be examined.
 - Assassination after three successes, if both Merlin and the Assassin are in play.
+- Optional variants, each a toggle in the host settings:
+  - **Excalibur** (Big Box): the leader gives Excalibur to a teammate other than themselves as part of the proposal.
+    After the cards are in, its holder may secretly flip one teammate's card. They privately see what it was, and
+    everyone sees whose card was chosen.
+  - **Targeting** (official optional rule): the leader also picks which mission to attempt. Mission 5 unlocks only after
+    two successes.
+  - **Cleric** (good, Big Box): learns whether the first leader is good or evil.
+  - **Trickster** (evil) and **Troublemaker** (good), from the Big Box: when examined by the Lady of the Lake, the
+    Trickster may show either loyalty and the Troublemaker must show Evil. With either in play, the examined player
+    picks the card they show (honest players can only pick the truth), so the pause itself gives nothing away.
 - Optional **out-loud voting**: everyone votes with thumbs and the leader taps the result.
 - Optional **overrides** for evil count and mission sizes, for player counts outside 5–10 or house rules.
   For 2–4 or 11+ players the app uses an improvised table and labels it as unofficial.

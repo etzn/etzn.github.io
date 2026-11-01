@@ -14,6 +14,8 @@ let config = {
   peer: { ...def.peer, ...(savedCfg.peer || {}) },
 };
 let S = store.get(K.state) || G.newState();
+// A game saved by an older version of the app can't be resumed; keep the players, drop the game.
+if (S.game && !Array.isArray(S.game.excaliburLog)) G.toLobby(S);
 let room = store.get(K.room) || randomCode();
 store.set(K.room, room);
 
@@ -63,7 +65,7 @@ function uniqueName(name, id) {
 function doAct(pid, action, onErr) {
   try {
     if (!action || typeof action !== 'object') throw new Error('Bad action.');
-    const clean = { type: String(action.type), team: Array.isArray(action.team) ? action.team.map(String) : undefined, approve: !!action.approve, approved: !!action.approved, fail: !!action.fail, target: action.target != null ? String(action.target) : undefined };
+    const clean = { type: String(action.type), team: Array.isArray(action.team) ? action.team.map(String) : undefined, approve: !!action.approve, approved: !!action.approved, fail: !!action.fail, target: action.target != null ? String(action.target) : undefined, mission: action.mission != null ? Number(action.mission) : undefined, excalibur: action.excalibur != null ? String(action.excalibur) : undefined, show: action.show != null ? String(action.show) : undefined };
     G.act(S, pid, clean);
     commit();
   } catch (e) { onErr(e.message); }
@@ -113,7 +115,7 @@ function startPeer() {
 }
 
 function onConn(c) {
-  c.on('open', () => lastSeen.set(c, Date.now()));
+  c.on('open', () => { lastSeen.set(c, Date.now()); if (c.pid || spectators.has(c)) commit(); }); // re-send if hello beat our 'open'
   c.on('data', (m) => { lastSeen.set(c, Date.now()); onData(c, m); });
   const drop = () => {
     let changed = spectators.delete(c);
@@ -234,7 +236,8 @@ function renderSettings() {
     return;
   }
   const c = config, o = c.override, pe = c.peer;
-  const roleBox = (r) => `<label class="check"><input type="checkbox" name="role_${r}" ${c.roles[r] ? 'checked' : ''}><span><b class="${G.ROLE_INFO[r].team}">${G.ROLE_INFO[r].name}</b><br><span class="muted small">${esc(G.ROLE_INFO[r].blurb)}</span></span></label>`;
+  const BAL = { cleric: 'Big Box · helps good · best at 7+', troublemaker: 'Big Box · helps evil · needs Lady of the Lake', trickster: 'Big Box · helps evil · needs Lady of the Lake' };
+  const roleBox = (r) => `<label class="check"><input type="checkbox" name="role_${r}" ${c.roles[r] ? 'checked' : ''}><span><b class="${G.ROLE_INFO[r].team}">${G.ROLE_INFO[r].name}</b><br><span class="muted small">${esc(G.ROLE_INFO[r].blurb)}${BAL[r] ? ` <i>(${BAL[r]})</i>` : ''}</span></span></label>`;
   $('settings').innerHTML = `<form class="card" id="cfg" autocomplete="off">
     <h3>Settings</h3>
     <label class="check"><input type="checkbox" name="hostPlays" ${c.hostPlays ? 'checked' : ''}><span>I’m playing on this device<br><span class="muted small">Your screen shows only your own seat. Off = this device just runs the game and shows the public board.</span></span></label>
@@ -244,6 +247,8 @@ function renderSettings() {
     </fieldset>
     <fieldset><legend>Rules</legend>
       <label class="check"><input type="checkbox" name="lady" ${c.lady ? 'checked' : ''}><span>Lady of the Lake<br><span class="muted small">After missions 2, 3 and 4 the holder privately learns one player’s loyalty. Recommended for 7+.</span></span></label>
+      <label class="check"><input type="checkbox" name="excalibur" ${c.excalibur ? 'checked' : ''}><span>Excalibur<br><span class="muted small">The leader hands Excalibur to a team member (not themselves) as part of the proposal. After the cards are in, its holder may secretly flip one teammate’s card and sees what it was. Everyone sees whose card was chosen. (Big Box)</span></span></label>
+      <label class="check"><input type="checkbox" name="targeting" ${c.targeting ? 'checked' : ''}><span>Targeting<br><span class="muted small">The leader also chooses which mission to attempt, in any order. Mission 5 unlocks only after two successes. (Official optional rule)</span></span></label>
       <label class="check"><input type="checkbox" name="trackVotes" ${c.trackVotes ? 'checked' : ''}><span>Team votes in the app<br><span class="muted small">Off = everyone votes out loud with thumbs and the leader taps the result.</span></span></label>
     </fieldset>
     <details><summary>Overrides: evil count & mission sizes</summary>
@@ -271,6 +276,8 @@ function readSettings() {
   config.hostPlays = v('hostPlays').checked;
   config.hostName = v('hostName').value;
   config.lady = v('lady').checked;
+  config.excalibur = v('excalibur').checked;
+  config.targeting = v('targeting').checked;
   config.trackVotes = v('trackVotes').checked;
   config.override = {
     enabled: v('ovEnabled').checked, evil: parseInt(v('ovEvil').value, 10) || 1,
