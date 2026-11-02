@@ -153,6 +153,7 @@ export function startGame(S, config, rng = Math.random) {
     team: [], excalibur: null, votes: {}, cards: { submitted: [], by: {} },
     lady: cfg.lady ? { holder: ladyHolder, used: [ladyHolder], log: [], pending: null } : null,
     excaliburLog: [],
+    missionLog: [],    // who played what, kept secret until the game ends
     history: [], lastEvent: null, eventSeq: 0,
     winner: null, reason: null, assassinTarget: null,
   };
@@ -200,6 +201,9 @@ function resolveMission(S, excaliburUse) {
   const G = S.game, m = G.missions[G.target];
   m.fails = Object.values(G.cards.by).filter(Boolean).length;
   m.result = m.fails >= m.need ? 'fail' : 'success';
+  const flip = excaliburUse && excaliburUse.target ? G.excaliburLog[G.excaliburLog.length - 1] : null;
+  G.missionLog.push({ mission: G.target, team: [...G.team], cards: { ...G.cards.by }, need: m.need, result: m.result, fails: m.fails,
+    excalibur: excaliburUse ? { by: excaliburUse.by, target: excaliburUse.target, original: flip ? flip.original : null } : null });
   event(G, { kind: 'mission', mission: G.target, fails: m.fails, result: m.result, need: m.need, size: G.team.length, excalibur: excaliburUse || null });
   // forget who played what: only the count survives
   G.round += 1; G.rejections = 0; G.team = []; G.excalibur = null; G.target = null; G.cards = { submitted: [], by: {} };
@@ -400,6 +404,7 @@ export function viewFor(S, pid, connected = new Set()) {
     assassinId: assassinVisible ? roleHolder(G, 'assassin') : null,
     rolesInPlay: G.rolesInPlay,
     roles: G.phase === 'over' ? G.roles : null,
+    reveal: G.phase === 'over' ? buildReveal(G) : null,
   };
   if (isPlayer) {
     const role = G.roles[pid];
@@ -411,4 +416,98 @@ export function viewFor(S, pid, connected = new Set()) {
     };
   }
   return v;
+}
+
+// ---------- post-game reveal ----------
+// Turns a finished game into a timeline (everything that happened, with the truth
+// shown) plus a few computed awards. Pure; only ever called once the game is over.
+export function buildReveal(G) {
+  const roles = G.roles;
+  const isEvil = (id) => teamOf(roles[id]) === 'evil';
+  const evilOn = (team) => team.filter(isEvil);
+  const missionLog = G.missionLog || [];
+  const ladyLog = (G.lady && G.lady.log) || [];
+  const timeline = [];
+  let mi = 0, completed = 0;
+  const pushLady = () => {
+    for (const l of ladyLog.filter((x) => x.round === completed)) {
+      const truth = teamOf(roles[l.target]);
+      timeline.push({ kind: 'lady', by: l.by, target: l.target, shown: l.team, truth, lied: l.team !== truth });
+    }
+  };
+  for (const h of G.history) {
+    const yes = h.votes ? Object.values(h.votes).filter(Boolean).length : null;
+    const no = h.votes ? Object.values(h.votes).length - yes : null;
+    timeline.push({ kind: 'proposal', mission: h.mission, attempt: h.attempt, leader: h.leader, team: h.team, evil: evilOn(h.team), excalibur: h.excalibur, votes: h.votes, approved: h.approved, yes, no, close: h.votes ? Math.abs(yes - no) <= 1 : false });
+    if (h.approved && missionLog[mi]) {
+      const m = missionLog[mi++];
+      // what each person actually played (before any Excalibur flip)
+      const played = { ...m.cards };
+      if (m.excalibur && m.excalibur.target) played[m.excalibur.target] = m.excalibur.original === 'fail';
+      const failers = Object.keys(played).filter((id) => played[id]);
+      let flip = null;
+      if (m.excalibur && m.excalibur.target) {
+        const without = failers.length; // fails as played, i.e. without the flip
+        const resultWithout = without >= m.need ? 'fail' : 'success';
+        flip = { by: m.excalibur.by, target: m.excalibur.target, from: m.excalibur.original, to: m.excalibur.original === 'fail' ? 'success' : 'fail', changed: resultWithout !== m.result };
+      }
+      timeline.push({ kind: 'mission', mission: m.mission, team: m.team, failers, result: m.result, fails: m.fails, need: m.need, excalibur: m.excalibur, flip });
+      completed += 1;
+      pushLady();
+    }
+  }
+  if (G.assassinTarget) timeline.push({ kind: 'assassin', by: roleHolder(G, 'assassin'), target: G.assassinTarget, targetRole: roles[G.assassinTarget], hit: roles[G.assassinTarget] === 'merlin' });
+
+  // ---- awards ----
+  const awards = [];
+  const pct = (a, b) => (b ? Math.round((100 * a) / b) : 0);
+  // A vote "reads the truth" if it approves a clean team or rejects a dirty one.
+  // The fifth proposal is skipped: approving it is forced by the rules, not judgment.
+  const judged = G.history.filter((h) => h.votes && h.attempt < 5);
+  const acc = {};
+  for (const h of judged) {
+    const clean = evilOn(h.team).length === 0;
+    for (const [id, v] of Object.entries(h.votes)) {
+      acc[id] = acc[id] || { right: 0, total: 0 };
+      acc[id].total += 1;
+      if (v === clean) acc[id].right += 1;
+    }
+  }
+  const merlin = roleHolder(G, 'merlin');
+  const goodOthers = Object.keys(roles).filter((id) => !isEvil(id) && id !== merlin && acc[id]);
+  if (merlin && acc[merlin] && acc[merlin].total >= 2) {
+    const m = acc[merlin];
+    const others = goodOthers.reduce((a, id) => ({ right: a.right + acc[id].right, total: a.total + acc[id].total }), { right: 0, total: 0 });
+    const mp = pct(m.right, m.total), op = pct(others.right, others.total);
+    const gap = mp - op;
+    const verdict = (gap >= 20 ? 'A readable Merlin.' : gap <= 5 ? 'A well-hidden Merlin.' : 'Somewhat readable.') + (m.total < 4 ? ' (Small sample, so take it lightly.)' : '');
+    awards.push({ icon: '🔮', title: 'Merlin’s tell', who: [merlin], detail: `Voted with the truth on ${m.right} of ${m.total} votes (${mp}%)${others.total ? `; the rest of good managed ${op}%` : ''}. ${verdict}` });
+  }
+  const eyes = goodOthers.filter((id) => acc[id].total >= 3).sort((a, b) => acc[b].right / acc[b].total - acc[a].right / acc[a].total);
+  if (eyes.length) {
+    const best = acc[eyes[0]].right / acc[eyes[0]].total;
+    const tied = eyes.filter((id) => acc[id].right / acc[id].total === best);
+    if (best > 0.5) awards.push({ icon: '👁', title: 'Sharpest eye', who: tied, detail: `Read ${pct(acc[eyes[0]].right, acc[eyes[0]].total)}% of votes correctly without any secret knowledge.` });
+  }
+  const evils = Object.keys(roles).filter(isEvil);
+  const trusted = {};
+  for (const h of G.history) if (h.approved) for (const id of h.team) if (isEvil(id)) trusted[id] = (trusted[id] || 0) + 1;
+  const topTrust = Math.max(0, ...Object.values(trusted));
+  if (topTrust >= 2) awards.push({ icon: '🎭', title: 'Most trusted traitor', who: evils.filter((id) => trusted[id] === topTrust), detail: `Got onto ${topTrust} approved teams.` });
+  const fails = {}, missionsOn = {};
+  for (const m of missionLog) for (const id of m.team) if (isEvil(id)) {
+    missionsOn[id] = (missionsOn[id] || 0) + 1;
+    const played = m.excalibur && m.excalibur.target === id ? m.excalibur.original === 'fail' : m.cards[id];
+    if (played) fails[id] = (fails[id] || 0) + 1;
+  }
+  const topFail = Math.max(0, ...Object.values(fails));
+  if (topFail >= 2) awards.push({ icon: '🗡', title: 'Saboteur', who: evils.filter((id) => fails[id] === topFail), detail: `Played ${topFail} Fail cards.` });
+  const deep = evils.filter((id) => (missionsOn[id] || 0) >= 2 && !fails[id]);
+  if (deep.length) awards.push({ icon: '🕳', title: 'Deep cover', who: deep, detail: 'Went on multiple missions and never played Fail.' });
+  const flips = timeline.filter((t) => t.kind === 'mission' && t.flip && t.flip.changed);
+  for (const t of flips) awards.push({ icon: '⚔', title: 'Decisive blade', who: [t.flip.by], detail: `Flipping ${'@' + t.flip.target}’s card turned Mission ${t.mission + 1} from ${t.result === 'fail' ? 'success into failure' : 'failure into success'}.` });
+  for (const t of timeline.filter((x) => x.kind === 'lady' && x.lied)) awards.push({ icon: '🌊', title: 'Lied to the Lady', who: [t.target], detail: `Showed ${t.shown.toUpperCase()} to @${t.by} while actually ${t.truth.toUpperCase()}.` });
+  const close = timeline.filter((t) => t.kind === 'proposal' && t.close && t.votes).length;
+  if (close) awards.push({ icon: '⚖', title: 'Close calls', who: [], detail: `${close} team vote${close === 1 ? ' was' : 's were'} decided by a single vote.` });
+  return { timeline, awards, accuracy: acc };
 }

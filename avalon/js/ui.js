@@ -91,6 +91,7 @@ export function createPlayerUI(root, send, { seenKey = 'avalon.seen', isHost = f
 
   function game(v) {
     const g = v.game;
+    if (g.phase === 'over' && g.reveal) return board(v) + panel(v) + reveal(v) + overlay(v);
     return board(v) + (v.mine ? roleCard(v) : '') + panel(v) + seats(v) + history(v) + overlay(v);
   }
 
@@ -269,6 +270,42 @@ export function createPlayerUI(root, send, { seenKey = 'avalon.seen', isHost = f
     const lady = (g.lady ? g.lady.log.map((e) => `<li>🌊 ${name(v, e.by)} examined ${name(v, e.target)}</li>`).join('') : '')
       + g.excaliburLog.map((e) => `<li>⚔ ${name(v, e.by)} flipped ${name(v, e.target)}’s card on ${mName(e.mission)}</li>`).join('');
     return `<details class="card"><summary>History</summary><ul class="hist">${lady}${rows}</ul></details>`;
+  }
+
+  // ---------- post-game reveal ----------
+  function reveal(v) {
+    const g = v.game, R = g.reveal, roles = g.roles;
+    const tm = (id) => (roles[id] ? ROLE_INFO[roles[id]].team : '');
+    const who = (id) => `<b class="${tm(id)}">${name(v, id)}</b>`;
+    const whos = (list) => list.map(who).join(', ') || '<i>nobody</i>';
+    const fill = (text) => esc(text).replace(/@([\w-]+)/g, (_, id) => who(id));
+    const awards = R.awards.map((a) => `<li><span class="aw-icon">${a.icon}</span><div><div class="aw-title">${esc(a.title)}${a.who.length ? ` · ${whos(a.who)}` : ''}</div><div class="muted small">${fill(a.detail)}</div></div></li>`).join('');
+    const good = Object.keys(R.accuracy).filter((id) => tm(id) === 'good' && R.accuracy[id].total).sort((a, b) => R.accuracy[b].right / R.accuracy[b].total - R.accuracy[a].right / R.accuracy[a].total);
+    const accLine = good.length ? `<p class="small acc"><span class="muted">How well good read the votes:</span> ${good.map((id) => `${who(id)} ${Math.round(100 * R.accuracy[id].right / R.accuracy[id].total)}%`).join(' · ')}</p>` : '';
+    const chip = (h, p) => `<span class="${h.votes[p.id] ? 'yes' : 'no'} t-${tm(p.id)}">${esc(p.name)} ${h.votes[p.id] ? '✓' : '✗'}</span>`;
+    const story = R.timeline.map((t) => {
+      if (t.kind === 'proposal') {
+        return `<li class="st-prop"><div><span class="st-tag">M${t.mission + 1}·${t.attempt}</span> ${who(t.leader)} proposed ${whos(t.team)}${t.excalibur ? ` <span class="muted">(⚔ ${name(v, t.excalibur)})</span>` : ''}</div>
+          <div class="small"><span class="${t.evil.length ? 'evil' : 'good'}">${t.evil.length ? `${t.evil.length} evil on the team` : 'Clean team'}</span> · <span class="muted">${t.approved ? 'approved' : 'rejected'}${t.votes ? ` ${t.yes}–${t.no}` : ''}${t.close ? ' · close call' : ''}</span></div>
+          ${t.votes ? `<div class="votes">${v.players.map((p) => chip(t, p)).join('')}</div>` : ''}</li>`;
+      }
+      if (t.kind === 'mission') {
+        const flip = t.excalibur ? (t.flip
+          ? `<div class="small">⚔ ${who(t.flip.by)} flipped ${who(t.flip.target)}’s ${t.flip.from.toUpperCase()} to ${t.flip.to.toUpperCase()}${t.flip.changed ? ' <b class="warn">and changed the result</b>' : ''}.</div>`
+          : `<div class="small muted">⚔ ${name(v, t.excalibur.by)} kept Excalibur sheathed.</div>`) : '';
+        return `<li class="st-mis ${t.result}"><div><b class="${t.result === 'success' ? 'good' : 'evil'}">Mission ${t.mission + 1} ${t.result === 'success' ? 'succeeded' : 'failed'}</b> <span class="muted small">(${t.fails} fail${t.fails === 1 ? '' : 's'}${t.need > 1 ? ', 2 needed' : ''})</span></div>
+          <div class="small">Played Fail: ${t.failers.length ? whos(t.failers) : '<span class="muted">nobody</span>'}</div>${flip}</li>`;
+      }
+      if (t.kind === 'lady') return `<li class="st-lady">🌊 ${who(t.by)} examined ${who(t.target)}: shown <span class="${t.shown}">${t.shown.toUpperCase()}</span>${t.lied ? `, actually <span class="${t.truth}">${t.truth.toUpperCase()}</span> <b class="warn">(a lie)</b>` : ' (true)'}</li>`;
+      if (t.kind === 'assassin') return `<li class="st-ass">🗡 ${who(t.by)} named ${who(t.target)}, who was ${esc(ROLE_INFO[t.targetRole].name)}. <b class="${t.hit ? 'evil' : 'good'}">${t.hit ? 'A hit.' : 'A miss.'}</b></li>`;
+      return '';
+    }).join('');
+    return `<section class="card reveal-card">
+      ${awards ? `<h3>Awards</h3><ul class="awards">${awards}</ul>` : ''}${accLine}
+      <h3>The whole story</h3>
+      <p class="muted small">Names are colored by their true side.${g.trackVotes ? ' Vote chips: ✓ approve, ✗ reject.' : ''}</p>
+      <ol class="story">${story}</ol>
+    </section>`;
   }
 
   function overlay(v) {

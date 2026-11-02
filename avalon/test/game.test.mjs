@@ -266,4 +266,83 @@ const playMission = (S, team, failers = [], exTarget) => {
   assert.ok(v.some((x) => /Lady of the Lake/.test(x.msg)));
 }
 
+// ---------- post-game reveal ----------
+{
+  const { S, cfg } = lobby(7, { excalibur: true });
+  G.startGame(S, cfg, rng);
+  const ev = evilIds(S), gd = goodIds(S);
+  const merlin = Object.keys(S.game.roles).find((k) => S.game.roles[k] === 'merlin');
+  const propose = (team, holder) => G.act(S, lead(S), { type: 'propose', team, excalibur: holder });
+  const voteAll = (fn) => S.players.forEach((p) => G.act(S, p.id, { type: 'vote', approve: fn(p.id) }));
+  const pickHolder = (team) => team.find((id) => id !== lead(S));
+  // P1: dirty team, rejected; Merlin rejects (truthful), everyone else approves except the last two
+  const dirty = [ev[0], ...gd.filter((x) => x !== lead(S))].slice(0, 2);
+  if (!dirty.includes(lead(S)) || true) propose(dirty.includes(lead(S)) ? dirty : dirty, pickHolder(dirty));
+  voteAll((id) => id !== merlin && S.players.findIndex((p) => p.id === id) < 3);
+  assert.equal(S.game.history[0].approved, false);
+  // P2: clean team approved, holder flips a good card to fail => mission fails because of the flip
+  const clean = gd.filter((x) => x !== merlin).slice(0, 2);
+  const h2 = pickHolder(clean); propose(clean, h2);
+  voteAll(() => true);
+  for (const id of S.game.team) G.act(S, id, { type: 'card', fail: false });
+  const victim = clean.find((x) => x !== h2);
+  // reveal is hidden mid-game
+  assert.equal(G.viewFor(S, 'p0').game.reveal, null);
+  G.act(S, h2, { type: 'excalibur', target: victim });
+  assert.equal(S.game.missions[0].result, 'fail');
+  // M2: evil fails it
+  const t3 = [ev[0], ev[1], ...gd].slice(0, S.game.missions[1].size);
+  propose(t3, pickHolder(t3)); voteAll(() => true);
+  for (const id of S.game.team) G.act(S, id, { type: 'card', fail: ev.includes(id) });
+  G.act(S, S.game.excalibur, { type: 'excalibur' });
+  // M3: evil fails again => evil wins
+  const t4 = [ev[0], ...gd].slice(0, S.game.missions[2].size);
+  propose(t4, pickHolder(t4)); voteAll(() => true);
+  for (const id of S.game.team) G.act(S, id, { type: 'card', fail: id === ev[0] });
+  G.act(S, S.game.excalibur, { type: 'excalibur' });
+  assert.equal(S.game.winner, 'evil');
+  const R = G.viewFor(S, 'p0').game.reveal;
+  assert.deepEqual(R.timeline.map((t) => t.kind), ['proposal', 'proposal', 'mission', 'proposal', 'mission', 'proposal', 'mission']);
+  const m1 = R.timeline[2];
+  assert.deepEqual(m1.failers, []); // victim played Success; the flip made it a Fail
+  assert.equal(m1.flip.from, 'success'); assert.equal(m1.flip.changed, true);
+  const m2 = R.timeline[4];
+  assert.deepEqual(m2.failers.sort(), t3.filter((id) => ev.includes(id)).sort());
+  assert.equal(R.timeline[0].evil.length, 1);
+  assert.deepEqual(R.accuracy[merlin], { right: 2, total: 4 }); // rejected the dirty team, approved the clean one, then approved two dirty ones
+  assert.ok(R.awards.some((a) => a.title === 'Decisive blade' && a.who[0] === h2));
+  assert.ok(R.awards.some((a) => a.title === 'Saboteur' && a.who.includes(ev[0])));
+  assert.ok(R.awards.some((a) => a.title === 'Merlin’s tell'));
+}
+// Lady lies are surfaced
+{
+  let done = false;
+  for (let attempt = 0; attempt < 60; attempt++) {
+    const { S, cfg } = lobby(8, { lady: true, roles: { merlin: true, percival: false, assassin: true, morgana: false, mordred: false, oberon: false, cleric: false, troublemaker: false, trickster: true } });
+    G.startGame(S, cfg, rng);
+    for (let m = 0; m < 2; m++) playMission(S, goodIds(S).slice(0, S.game.missions[S.game.round].size));
+    const holder = S.game.lady.holder, trick = Object.keys(S.game.roles).find((k) => S.game.roles[k] === 'trickster');
+    if (trick === holder || S.game.lady.used.includes(trick)) continue;
+    G.act(S, holder, { type: 'lady', target: trick });
+    G.act(S, trick, { type: 'ladyShow', show: 'good' });
+    const ev0 = evilIds(S)[0];
+    playMission(S, [ev0, ...goodIds(S)].slice(0, S.game.missions[S.game.round].size), [ev0]);
+    // finish quickly: next lady then two failing missions
+    const h2 = S.game.lady.holder; const t = S.players.map((p) => p.id).find((k) => k !== h2 && !S.game.lady.used.includes(k));
+    G.act(S, h2, { type: 'lady', target: t }); G.act(S, t, { type: 'ladyShow', show: G.ladyOptions(S.game.roles[t])[0] });
+    const evs = evilIds(S).slice(0, 2);
+    playMission(S, [...evs, ...goodIds(S)].slice(0, S.game.missions[S.game.round].size), evs);
+    if (S.game.phase === 'lady') { const h3 = S.game.lady.holder; const t3 = S.players.map((p) => p.id).find((k) => k !== h3 && !S.game.lady.used.includes(k)); G.act(S, h3, { type: 'lady', target: t3 }); G.act(S, t3, { type: 'ladyShow', show: G.ladyOptions(S.game.roles[t3])[0] }); }
+    if (S.game.phase !== 'over') playMission(S, [...evs, ...goodIds(S)].slice(0, S.game.missions[S.game.round].size), evs);
+    assert.equal(S.game.phase, 'over');
+    const R = G.buildReveal(S.game);
+    const lies = R.timeline.filter((x) => x.kind === 'lady' && x.lied);
+    assert.equal(lies[0].target, trick);
+    assert.ok(R.awards.some((a) => a.title === 'Lied to the Lady'));
+    done = true;
+    break;
+  }
+  assert.ok(done, 'lady-lie scenario never came up');
+}
+
 console.log('all game tests passed');

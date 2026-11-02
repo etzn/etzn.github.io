@@ -41,6 +41,16 @@ missions, the vote track and results with no secret information.
 sleeps or reloads, it reconnects to the same seat on its own. If the host reloads, players reconnect on their
 own too. After a host refresh the room code can take up to a minute to free up on the matchmaking server.
 
+## Post-game reveal
+
+When a game ends, every screen (including the public board) shows the whole story with the truth visible:
+every proposal with the team's true makeup and who voted which way, who actually played each Fail card, every
+Excalibur flip and whether it changed the result, every Lady of the Lake check and whether the answer was a lie,
+and the assassination. Above it are a few computed awards, such as Merlin's tell (how closely Merlin's votes
+tracked the truth compared with the rest of good), the sharpest-eyed good player, the most trusted traitor, the
+top saboteur, and close calls. To make this possible, the host keeps who played which card until the game
+ends, then shows it to everyone.
+
 ## Rules implemented
 
 - The official 5–10 player table: team sizes, evil counts, and mission 4 needing two fails at 7+.
@@ -48,7 +58,7 @@ own too. After a host refresh the room code can take up to a minute to free up o
   visibility. (Merlin doesn't see Mordred. Percival sees Merlin and Morgana unlabeled. Evil doesn't see
   Oberon, and Oberon sees nobody.)
 - Team votes need a strict majority (ties reject). Five rejected proposals in a row means evil wins. Good
-  players can only play Success. Only the *count* of fail cards is kept, never who played them.
+  players can only play Success. During play, only the *count* of fail cards is shown. Who played them is revealed only after the game.
 - Lady of the Lake after missions 2, 3 and 4, starting with the player to the first leader's right. A player who
   has held it can't be examined.
 - Assassination after three successes, if both Merlin and the Assassin are in play.
